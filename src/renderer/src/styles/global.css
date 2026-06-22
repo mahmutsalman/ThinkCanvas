@@ -977,9 +977,10 @@ body,
   transition: border-color 0.12s ease, transform 0.08s ease;
 }
 
+/* Hover gives only a subtle neutral cue — the orange accent is reserved for the
+   single current selection (is-selected), so two cards never look selected. */
 .tc-search__result:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
+  border-color: var(--border-strong);
 }
 
 .tc-search__result.is-selected {
