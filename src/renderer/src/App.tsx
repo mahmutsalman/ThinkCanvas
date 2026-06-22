@@ -24,6 +24,17 @@ import CodeNode from './components/CodeNode'
 import FloatingEdge from './components/FloatingEdge'
 import Library, { type BoardSort } from './components/Library'
 import SearchPanel from './components/SearchPanel'
+import ThemeEditor from './components/ThemeEditor'
+import {
+  BUILTIN_THEMES,
+  applyTheme,
+  loadCustomThemes,
+  saveCustomThemes,
+  newThemeId,
+  readCurrentTokens,
+  type CustomTheme,
+  type ThemeTokens
+} from './lib/themes'
 import { getEditor } from './lib/codeEditors'
 import {
   emptyBoard,
@@ -48,12 +59,6 @@ const defaultEdgeOptions = { type: 'floating' as const }
 // Max code notes kept in the most-recently-used cycler (oldest auto-evicted).
 const MAX_MRU = 8
 
-// Selectable color themes (each just swaps the CSS color variables via the
-// [data-theme] attribute on <html>; see global.css). Extend this list to add more.
-const THEMES = [
-  { id: 'default', label: 'Midnight' },
-  { id: 'crimson', label: 'Crimson (by fligma)' }
-] as const
 const THEME_KEY = 'thinkcanvas:theme'
 
 const newId = (): string =>
@@ -132,12 +137,64 @@ function Flow(): JSX.Element {
       return next
     })
   }, [])
-  // Color theme (global UI pref): applied via [data-theme] on <html>.
+  // Color theme + user-made custom themes.
+  const [customThemes, setCustomThemes] = useState<CustomTheme[]>(() => loadCustomThemes())
   const [theme, setTheme] = useState<string>(() => localStorage.getItem(THEME_KEY) || 'default')
+  const [themeEditor, setThemeEditor] = useState<{
+    mode: 'create' | 'edit'
+    editingId: string | null
+  } | null>(null)
+
+  // Apply the active theme to <html> (built-in → data-theme; custom → inline vars).
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
+    applyTheme(theme, customThemes)
     localStorage.setItem(THEME_KEY, theme)
-  }, [theme])
+  }, [theme, customThemes])
+
+  const currentIsCustom = customThemes.some((t) => t.id === theme)
+
+  const onThemePick = useCallback((value: string) => {
+    if (value === '__new__') {
+      setThemeEditor({ mode: 'create', editingId: null })
+      return
+    }
+    setTheme(value)
+  }, [])
+
+  const saveTheme = useCallback(
+    (name: string, tokens: ThemeTokens) => {
+      const editId =
+        themeEditor?.mode === 'edit' && themeEditor.editingId ? themeEditor.editingId : null
+      const id = editId ?? newThemeId()
+      setCustomThemes((prev) => {
+        const next = editId
+          ? prev.map((t) => (t.id === editId ? { ...t, label: name, tokens } : t))
+          : [...prev, { id, label: name, tokens }]
+        saveCustomThemes(next)
+        return next
+      })
+      setTheme(id)
+      setThemeEditor(null)
+    },
+    [themeEditor]
+  )
+
+  const deleteTheme = useCallback(() => {
+    const id = themeEditor?.editingId
+    if (!id) return
+    setCustomThemes((prev) => {
+      const next = prev.filter((t) => t.id !== id)
+      saveCustomThemes(next)
+      return next
+    })
+    setTheme('default')
+    setThemeEditor(null)
+  }, [themeEditor])
+
+  const cancelThemeEdit = useCallback(() => {
+    setThemeEditor(null)
+    applyTheme(theme, customThemes) // revert any live-preview edits
+  }, [theme, customThemes])
   // When a search result lives on another board, remember which note to center
   // once that board's nodes have hydrated.
   const pendingFocus = useRef<string | null>(null)
@@ -634,15 +691,30 @@ function Flow(): JSX.Element {
           <select
             className="tc-topbar__theme"
             value={theme}
-            onChange={(e) => setTheme(e.target.value)}
+            onChange={(e) => onThemePick(e.target.value)}
             title="Color theme"
           >
-            {THEMES.map((t) => (
+            {BUILTIN_THEMES.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.label}
               </option>
             ))}
+            {customThemes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+            <option value="__new__">✎ New theme…</option>
           </select>
+          {currentIsCustom && (
+            <button
+              className="tc-topbar__themeedit"
+              onClick={() => setThemeEditor({ mode: 'edit', editingId: theme })}
+              title="Edit this theme"
+            >
+              ✎
+            </button>
+          )}
           <button onClick={() => setSearchOpen((v) => !v)} title="Search snippets (⌘F)">
             Search
           </button>
@@ -780,6 +852,25 @@ function Flow(): JSX.Element {
           onOpenSnippet={openSnippet}
           onBack={goBackToOrigin}
           onClose={() => setSearchOpen(false)}
+        />
+      )}
+
+      {themeEditor && (
+        <ThemeEditor
+          mode={themeEditor.mode}
+          initialName={
+            themeEditor.mode === 'edit'
+              ? customThemes.find((t) => t.id === themeEditor.editingId)?.label ?? 'My theme'
+              : 'My theme'
+          }
+          initialTokens={
+            (themeEditor.mode === 'edit'
+              ? customThemes.find((t) => t.id === themeEditor.editingId)?.tokens
+              : undefined) ?? readCurrentTokens()
+          }
+          onSave={saveTheme}
+          onDelete={themeEditor.mode === 'edit' ? deleteTheme : undefined}
+          onCancel={cancelThemeEdit}
         />
       )}
     </div>

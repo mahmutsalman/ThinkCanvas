@@ -143,6 +143,176 @@ body,
   color: var(--accent);
 }
 
+.tc-topbar__themeedit {
+  -webkit-app-region: no-drag;
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.tc-topbar__themeedit:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* In-app theme maker (floating panel; the canvas behind is the live preview) */
+.tc-themed {
+  position: fixed;
+  top: 48px;
+  right: 12px;
+  z-index: 1800;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.tc-themed__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tc-themed__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tc-themed__sub {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.tc-themed__spacer {
+  flex: 1 1 auto;
+}
+
+.tc-themed__x {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tc-themed__x:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.tc-themed__name {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 13px;
+  padding: 6px 9px;
+  outline: none;
+}
+
+.tc-themed__name:focus {
+  border-color: var(--accent);
+}
+
+.tc-themed__tokens {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.tc-themed__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tc-themed__label {
+  flex: 1 1 auto;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.tc-themed__swatch {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tc-themed__hex {
+  flex: 0 0 84px;
+  width: 84px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  padding: 4px 6px;
+  outline: none;
+}
+
+.tc-themed__hex:focus {
+  border-color: var(--accent);
+}
+
+.tc-themed__foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.tc-themed__cancel,
+.tc-themed__del {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+
+.tc-themed__del {
+  color: #ff7a7a;
+  border-color: transparent;
+}
+
+.tc-themed__del:hover {
+  border-color: #ff7a7a;
+}
+
+.tc-themed__save {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
 /* Interactive controls must opt out of the drag region or they won't click. */
 .tc-topbar button {
   -webkit-app-region: no-drag;
