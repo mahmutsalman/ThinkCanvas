@@ -12,11 +12,14 @@ import {
   type SyncBoard
 } from './db'
 
-// Pin the app name so dev and the packaged build share ONE userData folder
-// (otherwise dev uses package.json "name" = "thinkcanvas" while the packaged
-// app uses productName "ThinkCanvas", giving two separate board stores).
-// Must run before any app.getPath('userData') call.
+// Pin the app name AND the userData folder so dev and the packaged build share
+// ONE board store. Dev would otherwise use package.json "name" = "thinkcanvas"
+// while the packaged app uses productName "ThinkCanvas" → two separate stores.
+// setName alone isn't enough (Electron locks the userData path very early in
+// startup, before our JS runs), so we override the path explicitly. Both must
+// run before any app.getPath('userData') call (i.e. before whenReady).
 app.setName('ThinkCanvas')
+app.setPath('userData', join(app.getPath('appData'), 'ThinkCanvas'))
 
 // --- Board file storage --------------------------------------------------
 // Each board is one JSON file under <userData>/boards/<id>.json. No size
