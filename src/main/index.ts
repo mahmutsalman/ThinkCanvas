@@ -1,5 +1,62 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { promises as fs } from 'fs'
+
+// --- Board file storage --------------------------------------------------
+// Each board is one JSON file under <userData>/boards/<id>.json. No size
+// limits, survives crashes/reloads, and the folder can be opened/backed up.
+const boardsDir = (): string => join(app.getPath('userData'), 'boards')
+
+async function ensureBoardsDir(): Promise<void> {
+  await fs.mkdir(boardsDir(), { recursive: true })
+}
+
+function registerBoardIpc(): void {
+  ipcMain.handle('boards:list', async () => {
+    await ensureBoardsDir()
+    const files = await fs.readdir(boardsDir())
+    const metas: unknown[] = []
+    for (const f of files) {
+      if (!f.endsWith('.json')) continue
+      try {
+        const b = JSON.parse(await fs.readFile(join(boardsDir(), f), 'utf8'))
+        metas.push({
+          id: b.id,
+          name: b.name ?? 'Untitled',
+          createdAt: b.createdAt ?? 0,
+          updatedAt: b.updatedAt ?? 0,
+          noteCount: Array.isArray(b.nodes) ? b.nodes.length : 0
+        })
+      } catch {
+        /* skip unreadable file */
+      }
+    }
+    return metas
+  })
+
+  ipcMain.handle('boards:load', async (_e, id: string) => {
+    try {
+      return JSON.parse(await fs.readFile(join(boardsDir(), `${id}.json`), 'utf8'))
+    } catch {
+      return null
+    }
+  })
+
+  ipcMain.handle('boards:save', async (_e, board: { id: string }) => {
+    await ensureBoardsDir()
+    await fs.writeFile(join(boardsDir(), `${board.id}.json`), JSON.stringify(board), 'utf8')
+    return true
+  })
+
+  ipcMain.handle('boards:delete', async (_e, id: string) => {
+    try {
+      await fs.unlink(join(boardsDir(), `${id}.json`))
+    } catch {
+      /* already gone */
+    }
+    return true
+  })
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -37,6 +94,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  registerBoardIpc()
   createWindow()
 
   app.on('activate', () => {

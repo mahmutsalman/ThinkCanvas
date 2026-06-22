@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -21,9 +21,18 @@ import '@xyflow/react/dist/style.css'
 import TextNode from './components/TextNode'
 import CodeNode from './components/CodeNode'
 import FloatingEdge from './components/FloatingEdge'
+import Library from './components/Library'
 import { getEditor } from './lib/codeEditors'
+import {
+  emptyBoard,
+  newBoardId,
+  sanitizeBoard,
+  type Board,
+  type BoardMeta
+} from './lib/boards'
 
-const STORAGE_KEY = 'thinkcanvas:board:v1'
+const LEGACY_KEY = 'thinkcanvas:board:v1'
+const LAST_BOARD_KEY = 'thinkcanvas:lastBoard'
 
 // Defined outside the component so the references stay stable across renders
 // (React Flow warns and re-mounts nodes otherwise).
@@ -34,31 +43,36 @@ const defaultEdgeOptions = { type: 'floating' as const }
 // Max code notes kept in the most-recently-used cycler (oldest auto-evicted).
 const MAX_MRU = 8
 
-type Board = { nodes: Node[]; edges: Edge[] }
-
-function loadBoard(): Board {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const b = JSON.parse(raw) as Board
-      const nodes = (b.nodes ?? []).map((n) =>
-        n.type === 'text' ? { ...n, data: { ...n.data, editing: false } } : n
-      )
-      return { nodes, edges: b.edges ?? [] }
-    }
-  } catch {
-    /* corrupt or empty — start blank */
-  }
-  return { nodes: [], edges: [] }
-}
-
 const newId = (): string =>
   typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `n_${Date.now()}_${Math.round(Math.random() * 1e6)}`
 
+const sortBoards = (list: BoardMeta[]): BoardMeta[] =>
+  [...list].sort((a, b) => b.updatedAt - a.updatedAt)
+
+// One-time migration: fold the old single localStorage board into a real board.
+function loadLegacyBoard(): Board | null {
+  try {
+    const raw = localStorage.getItem(LEGACY_KEY)
+    if (!raw) return null
+    const b = JSON.parse(raw) as { nodes?: Node[]; edges?: Edge[] }
+    if (!b.nodes?.length && !b.edges?.length) return null
+    const now = Date.now()
+    return {
+      id: newBoardId(),
+      name: 'Imported board',
+      createdAt: now,
+      updatedAt: now,
+      nodes: b.nodes ?? [],
+      edges: b.edges ?? []
+    }
+  } catch {
+    return null
+  }
+}
+
 function Flow(): JSX.Element {
-  const initial = useMemo(loadBoard, [])
-  const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges)
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const wrapperRef = useRef<HTMLDivElement>(null)
   const dragStart = useRef<{ x: number; y: number } | null>(null)
   const edgesRef = useRef(edges)
@@ -73,15 +87,134 @@ function Flow(): JSX.Element {
   mruRef.current = mru
   const cursorRef = useRef(cursor)
   cursorRef.current = cursor
+  // Board (multi-document) state.
+  const [boardId, setBoardId] = useState<string | null>(null)
+  const [boardName, setBoardName] = useState('Untitled')
+  const [boardList, setBoardList] = useState<BoardMeta[]>([])
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  const hydrated = useRef(false)
+  const createdAtRef = useRef<number>(Date.now())
+  const boardNameRef = useRef(boardName)
+  boardNameRef.current = boardName
+  const boardIdRef = useRef(boardId)
+  boardIdRef.current = boardId
   const { screenToFlowPosition, getIntersectingNodes, setCenter, getZoom } = useReactFlow()
 
-  // --- persistence: debounced autosave -------------------------------------
+  // --- board load / save ---------------------------------------------------
+  const openBoard = useCallback(
+    (board: Board) => {
+      const clean = sanitizeBoard(board)
+      createdAtRef.current = clean.createdAt
+      setBoardId(clean.id)
+      setBoardName(clean.name)
+      setNodes(clean.nodes)
+      setEdges(clean.edges)
+      setMru([])
+      setCursor(-1)
+      localStorage.setItem(LAST_BOARD_KEY, clean.id)
+      hydrated.current = true
+    },
+    [setNodes, setEdges]
+  )
+
+  const saveCurrentNow = useCallback(async (): Promise<void> => {
+    const id = boardIdRef.current
+    if (!id) return
+    await window.boards.save({
+      id,
+      name: boardNameRef.current,
+      createdAt: createdAtRef.current,
+      updatedAt: Date.now(),
+      nodes: nodesRef.current,
+      edges: edgesRef.current
+    })
+  }, [])
+
+  // Load the last-opened (or most recent) board on startup; migrate legacy.
+  // Guarded so it runs exactly once — React StrictMode double-invokes effects
+  // in dev, and without this guard the "create first board" branch ran twice
+  // and produced duplicate boards.
+  const didInit = useRef(false)
   useEffect(() => {
+    if (didInit.current) return
+    didInit.current = true
+    ;(async () => {
+      const list = sortBoards(await window.boards.list())
+      let board: Board | null = null
+      const lastId = localStorage.getItem(LAST_BOARD_KEY)
+      if (lastId) board = await window.boards.load(lastId)
+      if (!board && list.length) board = await window.boards.load(list[0].id)
+      if (!board) {
+        board = loadLegacyBoard() ?? emptyBoard()
+        await window.boards.save(board)
+      }
+      openBoard(board)
+      setBoardList(sortBoards(await window.boards.list()))
+    })()
+  }, [openBoard])
+
+  // Debounced autosave of the current board to its file.
+  useEffect(() => {
+    if (!hydrated.current || !boardId) return
     const t = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }))
-    }, 400)
+      void window.boards.save({
+        id: boardId,
+        name: boardName,
+        createdAt: createdAtRef.current,
+        updatedAt: Date.now(),
+        nodes,
+        edges
+      })
+    }, 500)
     return () => clearTimeout(t)
-  }, [nodes, edges])
+  }, [nodes, edges, boardName, boardId])
+
+  // --- board actions (library) ---------------------------------------------
+  const openLibrary = useCallback(async () => {
+    setBoardList(sortBoards(await window.boards.list()))
+    setLibraryOpen(true)
+  }, [])
+
+  const switchBoard = useCallback(
+    async (id: string) => {
+      if (id === boardIdRef.current) {
+        setLibraryOpen(false)
+        return
+      }
+      await saveCurrentNow()
+      const board = await window.boards.load(id)
+      if (board) openBoard(board)
+      setLibraryOpen(false)
+    },
+    [saveCurrentNow, openBoard]
+  )
+
+  const createBoard = useCallback(async () => {
+    await saveCurrentNow()
+    const board = emptyBoard()
+    await window.boards.save(board)
+    openBoard(board)
+    setLibraryOpen(false)
+  }, [saveCurrentNow, openBoard])
+
+  const deleteBoard = useCallback(
+    async (id: string) => {
+      await window.boards.remove(id)
+      const list = sortBoards(await window.boards.list())
+      setBoardList(list)
+      if (id === boardIdRef.current) {
+        if (list.length) {
+          const b = await window.boards.load(list[0].id)
+          if (b) openBoard(b)
+        } else {
+          const b = emptyBoard()
+          await window.boards.save(b)
+          openBoard(b)
+        }
+      }
+    },
+    [openBoard]
+  )
 
   // --- edge label editing --------------------------------------------------
   const startEditEdge = useCallback(
@@ -343,9 +476,19 @@ function Flow(): JSX.Element {
       <div className="tc-topbar">
         <div className="tc-topbar__left">
           <span className="tc-topbar__name">ThinkCanvas</span>
-          <span className="tc-topbar__hint">double-click to add a note · drag a note onto another to connect</span>
+          <input
+            className="tc-topbar__title"
+            value={boardName}
+            spellCheck={false}
+            placeholder="Untitled"
+            onChange={(e) => setBoardName(e.target.value)}
+            title="Rename this board"
+          />
         </div>
         <div className="tc-topbar__right">
+          <button onClick={openLibrary}>Boards</button>
+          <button onClick={createBoard}>New</button>
+          <span className="tc-topbar__sep" />
           <button onClick={() => addTextNode(viewportCenter())}>+ Note</button>
           <button onClick={() => addCodeNode(viewportCenter())}>+ Code</button>
         </div>
@@ -443,6 +586,17 @@ function Flow(): JSX.Element {
             Remove
           </button>
         </div>
+      )}
+
+      {libraryOpen && (
+        <Library
+          boards={boardList}
+          currentId={boardId}
+          onOpen={switchBoard}
+          onNew={createBoard}
+          onDelete={deleteBoard}
+          onClose={() => setLibraryOpen(false)}
+        />
       )}
     </div>
   )
