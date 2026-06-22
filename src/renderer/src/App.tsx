@@ -35,6 +35,7 @@ import {
 
 const LEGACY_KEY = 'thinkcanvas:board:v1'
 const LAST_BOARD_KEY = 'thinkcanvas:lastBoard'
+const MRU_COLLAPSED_KEY = 'thinkcanvas:mruCollapsed'
 
 // Defined outside the component so the references stay stable across renders
 // (React Flow warns and re-mounts nodes otherwise).
@@ -99,6 +100,17 @@ function Flow(): JSX.Element {
   const [boardList, setBoardList] = useState<BoardMeta[]>([])
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  // Collapse state of the left-side code-note cycler (global UI pref).
+  const [mruCollapsed, setMruCollapsed] = useState<boolean>(
+    () => localStorage.getItem(MRU_COLLAPSED_KEY) === '1'
+  )
+  const toggleMruCollapsed = useCallback(() => {
+    setMruCollapsed((v) => {
+      const next = !v
+      localStorage.setItem(MRU_COLLAPSED_KEY, next ? '1' : '0')
+      return next
+    })
+  }, [])
   // When a search result lives on another board, remember which note to center
   // once that board's nodes have hydrated.
   const pendingFocus = useRef<string | null>(null)
@@ -603,11 +615,24 @@ function Flow(): JSX.Element {
 
           {mru.length > 0 && (
             <Panel position="top-left">
-              <div className="tc-mru">
+              <div className={`tc-mru ${mruCollapsed ? 'is-collapsed' : ''}`}>
                 <div className="tc-mru__head">
-                  code notes <kbd>.</kbd>
+                  <button
+                    className="tc-mru__toggle"
+                    onClick={toggleMruCollapsed}
+                    title={mruCollapsed ? 'Expand code notes' : 'Collapse'}
+                  >
+                    {mruCollapsed ? '▸' : '▾'}
+                  </button>
+                  <span className="tc-mru__headlabel">code notes</span>
+                  {mruCollapsed ? (
+                    <span className="tc-mru__count">{mru.length}</span>
+                  ) : (
+                    <kbd>.</kbd>
+                  )}
                 </div>
-                {mru.map((id, i) => {
+                {!mruCollapsed &&
+                  mru.map((id, i) => {
                   const node = nodes.find((n) => n.id === id)
                   const cd = (node?.data ?? {}) as { code?: string; language?: string }
                   const firstLine =

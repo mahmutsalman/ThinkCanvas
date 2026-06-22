@@ -529,6 +529,10 @@ body,
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
+.tc-mru.is-collapsed {
+  width: auto;
+}
+
 .tc-mru__head {
   display: flex;
   align-items: center;
@@ -538,6 +542,39 @@ body,
   text-transform: uppercase;
   color: var(--text-dim);
   padding: 0 2px 4px;
+}
+
+.tc-mru.is-collapsed .tc-mru__head {
+  padding-bottom: 0;
+}
+
+.tc-mru__toggle {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tc-mru__toggle:hover {
+  color: var(--accent);
+}
+
+.tc-mru__headlabel {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.tc-mru__count {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 0 5px;
 }
 
 .tc-mru__head kbd {
