@@ -11,3 +11,11 @@ contextBridge.exposeInMainWorld('boards', {
   save: (board: unknown) => ipcRenderer.invoke('boards:save', board),
   remove: (id: string) => ipcRenderer.invoke('boards:delete', id)
 })
+
+// Cross-board snippet search over the derived SQLite/FTS5 index (read-only;
+// all writes flow through boards:save).
+contextBridge.exposeInMainWorld('snippets', {
+  search: (query: string, mode: 'tag' | 'text') =>
+    ipcRenderer.invoke('snippets:search', query, mode),
+  listTags: () => ipcRenderer.invoke('tags:list')
+})

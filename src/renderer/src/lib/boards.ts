@@ -17,6 +17,20 @@ export type BoardMeta = {
   noteCount: number
 }
 
+// One match from the cross-board snippet search (mirrors main/db.ts).
+export type SearchResult = {
+  nodeId: string
+  boardId: string
+  boardName: string
+  language: string
+  title: string
+  code: string
+  tags: string[]
+  excerpt?: string
+}
+
+export type SearchMode = 'tag' | 'text'
+
 declare global {
   interface Window {
     boards: {
@@ -24,6 +38,10 @@ declare global {
       load: (id: string) => Promise<Board | null>
       save: (board: Board) => Promise<boolean>
       remove: (id: string) => Promise<boolean>
+    }
+    snippets: {
+      search: (query: string, mode: SearchMode) => Promise<SearchResult[]>
+      listTags: () => Promise<string[]>
     }
   }
 }

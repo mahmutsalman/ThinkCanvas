@@ -1,6 +1,16 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
+import {
+  openDatabase,
+  closeDatabase,
+  syncBoardSnippets,
+  deleteBoardSnippets,
+  searchByTags,
+  searchByText,
+  listTags,
+  type SyncBoard
+} from './db'
 
 // --- Board file storage --------------------------------------------------
 // Each board is one JSON file under <userData>/boards/<id>.json. No size
@@ -42,9 +52,16 @@ function registerBoardIpc(): void {
     }
   })
 
-  ipcMain.handle('boards:save', async (_e, board: { id: string }) => {
+  ipcMain.handle('boards:save', async (_e, board: SyncBoard & { id: string }) => {
     await ensureBoardsDir()
     await fs.writeFile(join(boardsDir(), `${board.id}.json`), JSON.stringify(board), 'utf8')
+    // Mirror code notes into the search index. The board file is already safe,
+    // so a sync failure must never fail the save.
+    try {
+      syncBoardSnippets(board)
+    } catch (err) {
+      console.error('snippet sync failed', err)
+    }
     return true
   })
 
@@ -54,8 +71,21 @@ function registerBoardIpc(): void {
     } catch {
       /* already gone */
     }
+    try {
+      deleteBoardSnippets(id)
+    } catch (err) {
+      console.error('snippet delete failed', err)
+    }
     return true
   })
+}
+
+// Read-only search channels over the derived SQLite index.
+function registerSnippetIpc(): void {
+  ipcMain.handle('snippets:search', (_e, query: string, mode: 'tag' | 'text') =>
+    mode === 'tag' ? searchByTags(query) : searchByText(query)
+  )
+  ipcMain.handle('tags:list', () => listTags())
 }
 
 function createWindow(): void {
@@ -94,7 +124,9 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  openDatabase() // before IPC — the snippet handlers depend on it
   registerBoardIpc()
+  registerSnippetIpc()
   createWindow()
 
   app.on('activate', () => {
@@ -104,4 +136,8 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
+})
+
+app.on('will-quit', () => {
+  closeDatabase()
 })
