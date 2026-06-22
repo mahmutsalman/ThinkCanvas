@@ -1,26 +1,28 @@
 # Status — ThinkCanvas
 
-**Last updated**: 2026-06-22 16:30
+**Last updated**: 2026-06-22 18:00
 **Current phase**: Phase 2 — Knowledge base (tag + cross-board snippet search)
-**Current slice**: Slice 07 — SQLite/FTS5 search + tags + title (implemented; in dev testing)
+**Current slice**: Slice 08 — Search keyboard UX + dev-loop hardening (done; in dev)
 
 ---
 
 ## Last Completed Task
-Added a tag + search knowledge base: a derived SQLite/FTS5 index that mirrors every code note on save, inline tag chips + an optional title on code notes, and a pinnable cross-board search panel (tag + literal text, ⌘F). Slices 1–3 committed; DB logic verified by a standalone test.
+Search panel keyboard UX: ↑/↓ live-navigate results and auto-open each (no Enter), focus stays in the search box, and the orange highlight is reserved for the single selected result (hover is neutral). Plus dev-loop hardening: single-instance lock, unified dev/packaged userData, and a clean single dev process.
 
 ## Next Concrete Action
-User to test in dev (tagging, text/tag search, Open-board centering). Then Slice 4: `npm run build:mac`, reinstall to /Applications, and checkpoint. Code is published to a public GitHub repo for sharing.
+Keep iterating in dev (HMR live). When ready to ship these to the dock app: `npm run build:mac` → reinstall to /Applications → then unregister + delete `dist/` (prevents the duplicate dock icon).
 
 ## Active Blockers
 - none
 
 ## Open Questions
+- Cross-board search results switch boards on every arrow-land (heavier than same-board). Keep instant, or require Enter for cross-board jumps only?
 - A pre-existing code note only enters the index after its board is saved once (any edit triggers autosave). Backfill all boards on first launch?
-- Tag search is OR semantics today — add AND filtering / saved tag filters?
-- Reset/fitView the camera when opening a board (notes can be off-screen on switch)?
+- Tag search is OR semantics — add AND filtering / saved tag filters?
 
-## Recent Decisions (last 3)
-- SQLite/FTS5 is a DERIVED search index; boards JSON stays the source of truth (rebuilt per board on save).
-- All writes flow through `boards:save` (tags live in node.data); only two new read-only IPC channels (`snippets:search`, `tags:list`).
-- `better-sqlite3` rebuilt for Electron's Node ABI via `electron-builder install-app-deps` (postinstall) + `asarUnpack` for packaging.
+## Recent Decisions (last 5)
+- Search results auto-open as you arrow (sel starts at -1; first ↓ opens top match); Esc closes and returns focus to canvas.
+- Result cards use `onMouseDown` preventDefault so clicking navigates without stealing focus from the search box.
+- Single-instance lock (`requestSingleInstanceLock`) in main — a second launch focuses the existing window instead of opening a twin.
+- `app.setName('ThinkCanvas')` + `app.setPath('userData', …)` so dev and packaged share one board store (macOS APFS is case-insensitive, so this was belt-and-suspenders here, but protects case-sensitive volumes).
+- Dock duplicate root cause: stale LaunchServices registration of the `dist/` bundle (same appId as /Applications). Reinstall flow now deletes `dist/`.
