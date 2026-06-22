@@ -1,28 +1,28 @@
 # Status — ThinkCanvas
 
-**Last updated**: 2026-06-22 18:37
-**Current phase**: Phase 2 — Knowledge base (tag + cross-board snippet search)
-**Current slice**: Slice 09 — Ranked tag filter + true per-assignment recency (done)
+**Last updated**: 2026-06-22 20:20
+**Current phase**: Phase 3 — Theming & collaboration
+**Current slice**: Slice 10 — Theme system (switcher, in-app maker, 8 themes) (done; in dev)
 
 ---
 
 ## Last Completed Task
-Tag mode now has a type-to-filter ranked tag list with two lenses: "Most used" (frequency, from the snippet_tags junction) and "Recent" (true last-assignment time). Added schema v2 (`snippet_tags.assigned_at`) with carry-forward on re-save so recency reflects the real moment a tag was applied, not board saves. Then built + installed to production and pushed.
+Built a full theme system: a top-bar theme switcher, an in-app theme maker ("New theme…" editor with whole-app live preview, custom themes persisted + edit/delete), and 8 built-in palettes (Midnight, Crimson by fligma, Nord, Dracula, Solarized Dark, Tokyo Night, Gruvbox, Catppuccin Mocha). Also added a Back button to search (returns to camera/board where search opened).
 
 ## Next Concrete Action
-Keep iterating in dev (HMR). Open question to decide: cross-board search results switch boards on every arrow-land — keep instant or gate behind Enter?
+Keep iterating in dev (HMR). When ready to ship: `npm run build:mac` → reinstall to /Applications → delete `dist/` (avoids the duplicate dock icon). Optional: theme import/export, a light theme.
 
 ## Active Blockers
 - none
 
 ## Open Questions
-- Cross-board arrow-land switches boards each time — keep instant or require Enter for cross-board only?
-- Backfill all existing boards into the search index on first launch (today a board indexes only after it's saved once)?
-- "Recent" recency is precise per assignment now; consider a snippet-level "recently studied" view too?
+- Add a light theme (token model is dark-first: dark bg + light text)?
+- Theme import/export as JSON so themes can be shared (e.g. with fligma)?
+- Cross-board search arrow-land switches boards each time — keep instant or gate behind Enter?
 
 ## Recent Decisions (last 5)
-- Tag recency tracked via `snippet_tags.assigned_at` (schema v2), carried forward across re-saves; stamped `now` only for genuinely new tag↔snippet links.
-- Tag list ranking is computed (frequency = COUNT junction, recency = MAX assigned_at) — no denormalized counter table.
-- Tag mode: typing filters the ranked list; picking a tag runs the snippet search; sort toggle (Most used / Recent) persisted in localStorage.
-- Single-instance lock + unified userData (setName/setPath) so dev and packaged share one store and never double-launch.
-- Reinstall flow deletes `dist/` + unregisters it from LaunchServices to avoid the duplicate dock icon.
+- Themes = the 9 CSS color variables. Built-in themes are [data-theme] CSS blocks; custom themes apply as inline CSS variables on <html>. One token model, every component re-skins automatically.
+- In-app theme maker reuses the live document as its preview (setLiveToken on each pick) rather than a separate mock — inspired by fligma's Python tool (vetted safe: stdlib-only Tkinter, one user-chosen file write, no network/shell/exec).
+- 6 curated palettes mapped from renowned contrast-tested schemes (Nord/Dracula/Solarized/Tokyo Night/Gruvbox/Catppuccin).
+- Search "Back" snapshots board + viewport on open and restores it.
+- Created the `/thinkcanvas-db` command (in ~/.claude/commands) to build/explore the knowledge base — writes board JSON (source of truth), reads SQLite (derived index).
