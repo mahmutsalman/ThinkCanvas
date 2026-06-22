@@ -64,7 +64,7 @@ export default function SearchPanel({
       const r = await window.snippets.search(q, mode)
       setResults(r)
       setSearched(true)
-      setSel(0) // reset highlight to the top match on every new search
+      setSel(-1) // nothing selected yet; first ↓ opens the top match
     }, 220)
     return () => clearTimeout(t)
   }, [query, mode])
@@ -89,13 +89,17 @@ export default function SearchPanel({
     } else if (e.key === 'ArrowDown') {
       if (!results.length) return
       e.preventDefault()
-      setSel((i) => Math.min(i + 1, results.length - 1))
+      const next = Math.min(sel + 1, results.length - 1)
+      setSel(next)
+      openResult(results[next]) // open as you navigate — no Enter needed
     } else if (e.key === 'ArrowUp') {
       if (!results.length) return
       e.preventDefault()
-      setSel((i) => Math.max(i - 1, 0))
+      const next = Math.max(sel - 1, 0)
+      setSel(next)
+      openResult(results[next])
     } else if (e.key === 'Enter') {
-      const r = results[sel]
+      const r = results[sel] ?? results[0]
       if (!r) return
       e.preventDefault()
       openResult(r)
