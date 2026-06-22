@@ -1,0 +1,52 @@
+{
+  "name": "thinkcanvas",
+  "version": "1.0.0",
+  "description": "Scapple-style infinite canvas for thinking — double-click to drop a note, drag-to-connect, with live Monaco code notes",
+  "main": "out/main/index.js",
+  "author": "Mahmut Salman",
+  "scripts": {
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "build:mac": "electron-vite build && electron-builder --mac --arm64"
+  },
+  "build": {
+    "appId": "com.mahmutsalman.thinkcanvas",
+    "productName": "ThinkCanvas",
+    "directories": {
+      "buildResources": "resources",
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "identity": null,
+      "target": [
+        {
+          "target": "dir",
+          "arch": ["arm64"]
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "@xyflow/react": "^12.3.5",
+    "monaco-editor": "^0.52.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^31.0.2",
+    "electron-builder": "^26.8.1",
+    "electron-vite": "^2.3.0",
+    "typescript": "^5.5.2",
+    "vite": "^5.3.1"
+  }
+}

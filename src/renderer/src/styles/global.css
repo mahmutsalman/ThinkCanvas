@@ -1,0 +1,430 @@
+:root {
+  --bg: #14161b;
+  --bg-elev: #1c1f26;
+  --bg-elev-2: #232733;
+  --border: #2f343f;
+  --border-strong: #3c424f;
+  --text: #e6e8ee;
+  --text-dim: #9aa0ad;
+  --accent: #e9883a;
+  --accent-soft: rgba(233, 136, 58, 0.18);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.tc-app {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+}
+
+.tc-flow {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+/* Draggable OS title bar -------------------------------------------------- */
+.tc-topbar {
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  flex: 0 0 40px;
+  padding: 0 12px 0 82px; /* leave room for the macOS traffic lights */
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.tc-topbar__left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tc-topbar__name {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.tc-topbar__hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tc-topbar__right {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+/* Interactive controls must opt out of the drag region or they won't click. */
+.tc-topbar button {
+  -webkit-app-region: no-drag;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 5px 11px;
+  cursor: pointer;
+}
+
+.tc-topbar button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* React Flow base surface ------------------------------------------------- */
+.react-flow {
+  background: var(--bg);
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+/* Nodes ------------------------------------------------------------------- */
+.tc-node {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+/* Text note: borderless like Scapple until selected/hovered */
+.tc-text {
+  min-width: 64px;
+  max-width: 320px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.tc-text:hover {
+  border-color: var(--border);
+}
+
+.tc-text.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tc-text.is-editing {
+  border-color: var(--border-strong);
+  background: var(--bg-elev);
+}
+
+.tc-text__view {
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: default;
+  min-height: 20px;
+}
+
+.tc-placeholder {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.tc-text__input {
+  display: block;
+  width: 280px;
+  min-height: 22px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* Code note --------------------------------------------------------------- */
+.tc-code {
+  width: 100%;
+  height: 100%;
+  min-width: 220px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.tc-code.is-selected {
+  border-color: var(--accent);
+}
+
+.tc-code__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--bg-elev-2);
+  border-bottom: 1px solid var(--border);
+  cursor: grab;
+  user-select: none;
+}
+
+.tc-code__header:active {
+  cursor: grabbing;
+}
+
+.tc-code__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: 0 0 auto;
+}
+
+.tc-code__lang {
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.tc-code__spacer {
+  flex: 1 1 auto;
+}
+
+.tc-code__btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 5px;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tc-code__btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.tc-code__btn.danger:hover {
+  color: #ff7a7a;
+  border-color: #ff7a7a;
+}
+
+.tc-code__body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Hidden connection handles (edges anchor here but draw border-to-border) */
+.tc-handle {
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  left: 50%;
+  top: 50%;
+}
+
+/* Node toolbar (floats above a selected text note) ------------------------ */
+.tc-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.tc-toolbar button {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tc-toolbar button:hover {
+  color: var(--text);
+  background: var(--bg-elev);
+}
+
+.tc-toolbar button.danger:hover {
+  color: #ff7a7a;
+}
+
+/* Floating UI panels ------------------------------------------------------ */
+.tc-titlebar {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 10px;
+  margin-top: 4px;
+  -webkit-app-region: drag;
+}
+
+.tc-titlebar__name {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.tc-titlebar__hint {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.tc-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.tc-tools button {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+
+.tc-tools button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tc-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 12px;
+  margin-bottom: 6px;
+}
+
+/* React Flow controls in dark ------------------------------------------- */
+.react-flow__controls {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.react-flow__controls-button {
+  background: var(--bg-elev-2);
+  border-bottom: 1px solid var(--border);
+  fill: var(--text);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--bg-elev);
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--accent);
+}
+
+/* Edge labels (smaller than notes) --------------------------------------- */
+.tc-edge-label-wrap {
+  position: absolute;
+  pointer-events: all;
+  font-size: 11px; /* notes are 14px — edge text is intentionally smaller */
+}
+
+.tc-edge-label {
+  background: var(--bg);
+  color: var(--text-dim);
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  white-space: pre;
+  cursor: text;
+}
+
+.tc-edge-label.is-selected {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.tc-edge-label__input {
+  font-size: 11px;
+  font-family: inherit;
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 1px 5px;
+  outline: none;
+  min-width: 48px;
+}
+
+/* Right-click context menu ------------------------------------------------ */
+.tc-ctx {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  padding: 4px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.tc-ctx button {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tc-ctx button:hover {
+  background: var(--bg-elev);
+}
+
+.tc-ctx button.danger:hover {
+  color: #ff7a7a;
+}
