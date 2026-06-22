@@ -1,0 +1,1067 @@
+:root {
+  --bg: #14161b;
+  --bg-elev: #1c1f26;
+  --bg-elev-2: #232733;
+  --border: #2f343f;
+  --border-strong: #3c424f;
+  --text: #e6e8ee;
+  --text-dim: #9aa0ad;
+  --accent: #e9883a;
+  --accent-soft: rgba(233, 136, 58, 0.18);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.tc-app {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+}
+
+.tc-flow {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+/* Draggable OS title bar -------------------------------------------------- */
+.tc-topbar {
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  flex: 0 0 40px;
+  padding: 0 12px 0 82px; /* leave room for the macOS traffic lights */
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.tc-topbar__left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tc-topbar__name {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.tc-topbar__hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tc-topbar__title {
+  -webkit-app-region: no-drag;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 8px;
+  min-width: 80px;
+  max-width: 260px;
+  outline: none;
+}
+
+.tc-topbar__title:hover {
+  border-color: var(--border);
+}
+
+.tc-topbar__title:focus {
+  border-color: var(--border-strong);
+  background: var(--bg-elev-2);
+}
+
+.tc-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.tc-topbar__sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+/* Interactive controls must opt out of the drag region or they won't click. */
+.tc-topbar button {
+  -webkit-app-region: no-drag;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 5px 11px;
+  cursor: pointer;
+}
+
+.tc-topbar button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* React Flow base surface ------------------------------------------------- */
+.react-flow {
+  background: var(--bg);
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+/* Nodes ------------------------------------------------------------------- */
+.tc-node {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+/* Text note: borderless like Scapple until selected/hovered */
+.tc-text {
+  min-width: 64px;
+  max-width: 320px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.tc-text:hover {
+  border-color: var(--border);
+}
+
+.tc-text.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tc-text.is-editing {
+  border-color: var(--border-strong);
+  background: var(--bg-elev);
+}
+
+.tc-text__view {
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: default;
+  min-height: 20px;
+}
+
+.tc-placeholder {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.tc-text__input {
+  display: block;
+  width: 280px;
+  min-height: 22px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* Code note --------------------------------------------------------------- */
+.tc-code {
+  width: 100%;
+  height: 100%;
+  min-width: 220px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.tc-code.is-selected {
+  border-color: var(--accent);
+}
+
+.tc-code__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--bg-elev-2);
+  border-bottom: 1px solid var(--border);
+  cursor: grab;
+  user-select: none;
+}
+
+.tc-code__header:active {
+  cursor: grabbing;
+}
+
+.tc-code__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: 0 0 auto;
+}
+
+.tc-code__lang {
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.tc-code__spacer {
+  flex: 1 1 auto;
+}
+
+.tc-code__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  border-bottom: 1px solid transparent;
+  font-size: 11px;
+  padding: 2px 2px;
+  outline: none;
+}
+
+.tc-code__title::placeholder {
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.tc-code__title:focus {
+  border-bottom-color: var(--border-strong);
+}
+
+.tc-code__btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 5px;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tc-code__btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.tc-code__btn.danger:hover {
+  color: #ff7a7a;
+  border-color: #ff7a7a;
+}
+
+.tc-code__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+
+/* Transparent click/scroll shield shown while a code note is NOT selected.
+   Lets two-finger panning pass through (no Monaco wheel capture); a click
+   falls through to React Flow which selects + centers the note. */
+.tc-code__shield {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Inline tag chip row (bottom of a code note) ---------------------------- */
+.tc-code__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  background: var(--bg-elev-2);
+  border-top: 1px solid var(--border);
+}
+
+.tc-code__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1px 4px 1px 5px;
+  white-space: nowrap;
+}
+
+.tc-code__tagx {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tc-code__tagx:hover {
+  opacity: 1;
+}
+
+.tc-code__tagadd {
+  flex: 1 1 60px;
+  min-width: 60px;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  font-size: 11px;
+  padding: 1px 2px;
+  outline: none;
+}
+
+.tc-code__tagadd::placeholder {
+  color: var(--text-dim);
+  opacity: 0.55;
+}
+
+/* Hidden connection handles (edges anchor here but draw border-to-border) */
+.tc-handle {
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  left: 50%;
+  top: 50%;
+}
+
+/* Node toolbar (floats above a selected text note) ------------------------ */
+.tc-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.tc-toolbar button {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tc-toolbar button:hover {
+  color: var(--text);
+  background: var(--bg-elev);
+}
+
+.tc-toolbar button.danger:hover {
+  color: #ff7a7a;
+}
+
+/* Floating UI panels ------------------------------------------------------ */
+.tc-titlebar {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 10px;
+  margin-top: 4px;
+  -webkit-app-region: drag;
+}
+
+.tc-titlebar__name {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.tc-titlebar__hint {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.tc-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.tc-tools button {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+
+.tc-tools button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tc-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 12px;
+  margin-bottom: 6px;
+}
+
+/* React Flow controls in dark ------------------------------------------- */
+.react-flow__controls {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.react-flow__controls-button {
+  background: var(--bg-elev-2);
+  border-bottom: 1px solid var(--border);
+  fill: var(--text);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--bg-elev);
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--accent);
+}
+
+/* Edge labels (smaller than notes) --------------------------------------- */
+.tc-edge-label-wrap {
+  position: absolute;
+  pointer-events: all;
+  font-size: 11px; /* notes are 14px — edge text is intentionally smaller */
+}
+
+.tc-edge-label {
+  background: var(--bg);
+  color: var(--text-dim);
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  white-space: pre;
+  cursor: text;
+}
+
+.tc-edge-label.is-selected {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.tc-edge-label__input {
+  font-size: 11px;
+  font-family: inherit;
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 1px 5px;
+  outline: none;
+  min-width: 48px;
+}
+
+/* Left-side MRU code-note cycler ----------------------------------------- */
+.tc-mru {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 188px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.tc-mru__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 0 2px 4px;
+}
+
+.tc-mru__head kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 5px;
+  color: var(--text);
+}
+
+.tc-mru__chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 8px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.tc-mru__chip:hover {
+  border-color: var(--border-strong);
+}
+
+.tc-mru__chip.is-current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tc-mru__lang {
+  flex: 0 0 auto;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--accent);
+  background: rgba(233, 136, 58, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.tc-mru__text {
+  flex: 1 1 auto;
+  font-size: 12px;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Library overlay (board gallery) ---------------------------------------- */
+.tc-library {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 17, 22, 0.92);
+  backdrop-filter: blur(3px);
+}
+
+.tc-library__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tc-library__title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tc-library__count {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1px 9px;
+}
+
+.tc-library__spacer {
+  flex: 1 1 auto;
+}
+
+.tc-library__new,
+.tc-library__close {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 13px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.tc-library__new {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tc-library__new:hover {
+  background: var(--accent-soft);
+}
+
+.tc-library__close:hover {
+  border-color: var(--border-strong);
+}
+
+.tc-library__grid {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 22px;
+  align-content: start;
+}
+
+.tc-library__empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-dim);
+  padding: 60px 0;
+  font-size: 14px;
+}
+
+.tc-card {
+  position: relative;
+  height: 116px;
+  padding: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.12s ease, transform 0.08s ease;
+}
+
+.tc-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.tc-card.is-current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tc-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tc-card__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.tc-card__badge {
+  flex: 0 0 auto;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.tc-card__meta {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.tc-card__del {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tc-card:hover .tc-card__del {
+  opacity: 1;
+}
+
+.tc-card__del:hover {
+  color: #ff7a7a;
+  border-color: #ff7a7a;
+}
+
+/* Right-click context menu ------------------------------------------------ */
+.tc-ctx {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  padding: 4px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.tc-ctx button {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tc-ctx button:hover {
+  background: var(--bg-elev);
+}
+
+.tc-ctx button.danger:hover {
+  color: #ff7a7a;
+}
+
+/* Search side panel (docked right, non-modal) ---------------------------- */
+.tc-search {
+  position: fixed;
+  top: 40px; /* below the draggable top bar */
+  right: 0;
+  bottom: 0;
+  z-index: 1500;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+}
+
+.tc-search__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tc-search__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tc-search__spacer {
+  flex: 1 1 auto;
+}
+
+.tc-search__close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tc-search__close:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.tc-search__modes {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 6px;
+}
+
+.tc-search__modes button {
+  flex: 1 1 auto;
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 5px 0;
+  cursor: pointer;
+}
+
+.tc-search__modes button.is-active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tc-search__input {
+  margin: 4px 12px 8px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 13px;
+  padding: 7px 9px;
+  outline: none;
+}
+
+.tc-search__input:focus {
+  border-color: var(--accent);
+}
+
+.tc-search__taglist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 0 12px 8px;
+  max-height: 96px;
+  overflow-y: auto;
+}
+
+.tc-search__tagchip {
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.tc-search__tagchip:hover {
+  border-color: var(--accent);
+}
+
+.tc-search__results {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 4px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tc-search__empty {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 12px 2px;
+}
+
+.tc-search__result {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 9px 10px;
+}
+
+.tc-search__rtop {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+}
+
+.tc-search__lang {
+  flex: 0 0 auto;
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(233, 136, 58, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.tc-search__heading {
+  flex: 1 1 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tc-search__code {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 92px;
+  overflow: hidden;
+}
+
+.tc-search__hit {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 2px;
+}
+
+.tc-search__rtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+
+.tc-search__rtag {
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.tc-search__rfoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tc-search__board {
+  flex: 1 1 auto;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tc-search__open {
+  flex: 0 0 auto;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+
+.tc-search__open:hover {
+  background: var(--accent-soft);
+}
+
+/* Camera feed ------------------------------------------------------------- */
+.tc-camera {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 256px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  z-index: 50;
+}
+
+.tc-camera__status {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text);
+  z-index: 10;
+}
+
+.tc-camera__error {
+  height: 192px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #ff7a7a;
+  background: rgba(255, 122, 122, 0.1);
+}
+
+.tc-camera__view {
+  position: relative;
+  height: 192px;
+  background: #000;
+}
+
+.tc-camera__video,
+.tc-camera__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}

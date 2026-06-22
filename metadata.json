@@ -1,0 +1,10 @@
+{
+  "name": "ThinkCanvas",
+  "description": "Infinite canvas with code nodes and hand gesture tracking",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
