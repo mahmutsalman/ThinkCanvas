@@ -44,7 +44,6 @@ npm run build:mac    # → dist/
 ```
 
 ## Project layout
-
 ```
 src/
 ├── main/
