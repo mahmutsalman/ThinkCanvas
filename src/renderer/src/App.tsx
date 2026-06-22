@@ -59,8 +59,10 @@ function Flow(): JSX.Element {
   const dragStart = useRef<{ x: number; y: number } | null>(null)
   const edgesRef = useRef(edges)
   edgesRef.current = edges
+  const nodesRef = useRef(nodes)
+  nodesRef.current = nodes
   const [menu, setMenu] = useState<{ x: number; y: number; edgeId: string } | null>(null)
-  const { screenToFlowPosition, getIntersectingNodes } = useReactFlow()
+  const { screenToFlowPosition, getIntersectingNodes, setCenter, getZoom } = useReactFlow()
 
   // --- persistence: debounced autosave -------------------------------------
   useEffect(() => {
@@ -144,11 +146,11 @@ function Flow(): JSX.Element {
         nds.concat({
           id,
           type: 'code',
-          position: { x: flowPos.x - 180, y: flowPos.y - 110 },
+          position: { x: flowPos.x - 120, y: flowPos.y - 100 },
           dragHandle: '.tc-code__header',
-          width: 360,
-          height: 220,
-          data: { code: '', language: 'javascript' }
+          width: 240,
+          height: 200,
+          data: { code: '', language: 'java' }
         })
       )
     },
@@ -217,6 +219,20 @@ function Flow(): JSX.Element {
   // double-click on a text node enters edit mode is handled inside the node.
   const onNodeDoubleClick: NodeMouseHandler = useCallback(() => {}, [])
 
+  // Click a note → smoothly glide the camera so it sits in the middle of the
+  // screen. Skip when the note is already selected, so clicking into a note you
+  // just focused (e.g. to edit it) doesn't keep jerking the camera.
+  const onNodeClick: NodeMouseHandler = useCallback(
+    (_, node) => {
+      const current = nodesRef.current.find((n) => n.id === node.id)
+      if (current?.selected) return
+      const w = node.measured?.width ?? (typeof node.width === 'number' ? node.width : 160)
+      const h = node.measured?.height ?? (typeof node.height === 'number' ? node.height : 44)
+      setCenter(node.position.x + w / 2, node.position.y + h / 2, { zoom: getZoom(), duration: 450 })
+    },
+    [setCenter, getZoom]
+  )
+
   // Double-click an edge → start labelling it immediately.
   const onEdgeDoubleClick = useCallback(
     (e: React.MouseEvent, edge: Edge) => {
@@ -261,6 +277,7 @@ function Flow(): JSX.Element {
           onConnect={onConnect}
           onNodeDragStart={onNodeDragStart}
           onNodeDragStop={onNodeDragStop}
+          onNodeClick={onNodeClick}
           onNodeDoubleClick={onNodeDoubleClick}
           onEdgeDoubleClick={onEdgeDoubleClick}
           onEdgeContextMenu={onEdgeContextMenu}
@@ -275,6 +292,7 @@ function Flow(): JSX.Element {
           zoomOnScroll={false}
           panOnScroll
           zoomOnPinch
+          zoomActivationKeyCode={['Meta', 'Control']}
           panOnDrag
           selectionOnDrag={false}
           proOptions={{ hideAttribution: true }}

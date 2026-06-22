@@ -246,6 +246,18 @@ body,
 .tc-code__body {
   flex: 1 1 auto;
   min-height: 0;
+  position: relative;
+}
+
+/* Transparent click/scroll shield shown while a code note is NOT selected.
+   Lets two-finger panning pass through (no Monaco wheel capture); a click
+   falls through to React Flow which selects + centers the note. */
+.tc-code__shield {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: transparent;
+  cursor: pointer;
 }
 
 /* Hidden connection handles (edges anchor here but draw border-to-border) */

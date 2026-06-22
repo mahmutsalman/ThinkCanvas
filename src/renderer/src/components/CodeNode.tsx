@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import Editor from '@monaco-editor/react'
 import {
   Handle,
@@ -8,6 +9,9 @@ import {
   type Node
 } from '@xyflow/react'
 
+const MIN_ZOOM = 0.2
+const MAX_ZOOM = 2.5
+
 export type CodeNodeData = {
   code: string
   language: string
@@ -15,10 +19,42 @@ export type CodeNodeData = {
 
 export type CodeNodeType = Node<CodeNodeData, 'code'>
 
-const LANGUAGES = ['javascript', 'typescript', 'python', 'java', 'cpp', 'c', 'go', 'rust', 'sql', 'json']
+// Java first, Python second (the rest in a sensible order after that).
+const LANGUAGES = ['java', 'python', 'javascript', 'c', 'typescript', 'rust', 'cpp', 'go', 'sql', 'json']
 
 export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>) {
-  const { updateNodeData, setNodes, setEdges } = useReactFlow()
+  const { updateNodeData, setNodes, setEdges, getViewport, setViewport } = useReactFlow()
+  const bodyRef = useRef<HTMLDivElement>(null)
+
+  // Cmd/Ctrl + wheel should zoom the canvas even while the cursor is inside the
+  // editor. Monaco binds native wheel listeners, so a React handler can't stop
+  // it — we attach a native capture-phase listener that fires BEFORE Monaco,
+  // blocks it, and zooms the canvas anchored on the cursor. Plain wheel falls
+  // through so it still scrolls the code.
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent): void => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      e.preventDefault()
+      e.stopPropagation()
+      const container = el.closest('.react-flow') as HTMLElement | null
+      if (!container) return
+      const rect = container.getBoundingClientRect()
+      const { x, y, zoom } = getViewport()
+      const factor = Math.exp(-e.deltaY * 0.0015)
+      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor))
+      const px = e.clientX - rect.left
+      const py = e.clientY - rect.top
+      setViewport({
+        x: px - (px - x) * (newZoom / zoom),
+        y: py - (py - y) * (newZoom / zoom),
+        zoom: newZoom
+      })
+    }
+    el.addEventListener('wheel', onWheel, { capture: true, passive: false })
+    return () => el.removeEventListener('wheel', onWheel, { capture: true })
+  }, [getViewport, setViewport])
 
   const remove = (): void => {
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id))
@@ -62,7 +98,12 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
         </button>
       </div>
 
-      <div className="nodrag nowheel tc-code__body">
+      {/* Only capture the wheel (for Monaco scroll) while this note is selected.
+          When it isn't, a transparent shield sits over the editor so Monaco's
+          own wheel listeners never fire — the wheel bubbles to the canvas and
+          two-finger panning glides right over the note. Clicking the shield
+          selects the note (which removes it) so editing stays one click away. */}
+      <div ref={bodyRef} className={`nodrag tc-code__body ${selected ? 'nowheel' : ''}`}>
         <Editor
           language={data.language}
           value={data.code}
@@ -81,6 +122,7 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
             scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 }
           }}
         />
+        {!selected && <div className="tc-code__shield" />}
       </div>
 
       <Handle type="source" position={Position.Top} className="tc-handle" />

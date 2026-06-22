@@ -56,9 +56,9 @@ export default function TextNode({ id, data, selected }: NodeProps<TextNodeType>
               ...n,
               type: 'code',
               dragHandle: '.tc-code__header',
-              width: 360,
-              height: 220,
-              data: { code: data.text, language: 'javascript' }
+              width: 240,
+              height: 200,
+              data: { code: data.text, language: 'java' }
             }
           : n
       )
