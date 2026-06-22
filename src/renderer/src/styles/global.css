@@ -866,6 +866,12 @@ body,
   color: var(--text);
 }
 
+.tc-search__hint {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 .tc-search__spacer {
   flex: 1 1 auto;
 }
@@ -974,6 +980,15 @@ body,
 .tc-search__result:hover {
   border-color: var(--accent);
   transform: translateY(-1px);
+}
+
+.tc-search__result.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tc-search__result.is-selected .tc-search__open {
+  background: var(--accent-soft);
 }
 
 .tc-search__rtop {

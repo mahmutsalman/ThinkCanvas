@@ -38,7 +38,9 @@ export default function SearchPanel({
   const [results, setResults] = useState<SearchResult[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [searched, setSearched] = useState(false)
+  const [sel, setSel] = useState(0) // keyboard-highlighted result
   const inputRef = useRef<HTMLInputElement>(null)
+  const selRef = useRef<HTMLDivElement>(null)
 
   // Focus the search box as soon as the panel opens.
   useEffect(() => {
@@ -62,15 +64,34 @@ export default function SearchPanel({
       const r = await window.snippets.search(q, mode)
       setResults(r)
       setSearched(true)
+      setSel(0) // reset highlight to the top match on every new search
     }, 220)
     return () => clearTimeout(t)
   }, [query, mode])
+
+  // Keep the keyboard-highlighted result scrolled into view.
+  useEffect(() => {
+    selRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [sel])
 
   const onKey = (e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Escape') {
       e.preventDefault()
       e.stopPropagation()
       onClose()
+    } else if (e.key === 'ArrowDown') {
+      if (!results.length) return
+      e.preventDefault()
+      setSel((i) => Math.min(i + 1, results.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      if (!results.length) return
+      e.preventDefault()
+      setSel((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      const r = results[sel]
+      if (!r) return
+      e.preventDefault()
+      onOpenSnippet(r.boardId, r.nodeId)
     }
   }
 
@@ -83,6 +104,7 @@ export default function SearchPanel({
     <div className="tc-search">
       <div className="tc-search__head">
         <span className="tc-search__title">Search snippets</span>
+        <span className="tc-search__hint">↑↓ Enter</span>
         <div className="tc-search__spacer" />
         <button className="tc-search__close" onClick={onClose} title="Close (Esc)">
           ✕
@@ -128,14 +150,16 @@ export default function SearchPanel({
         {searched && results.length === 0 && (
           <div className="tc-search__empty">No matches.</div>
         )}
-        {results.map((r) => {
+        {results.map((r, i) => {
           const heading = r.title?.trim() || firstLines(r.code, 1) || '(untitled)'
           const onThisBoard = r.boardId === currentBoardId
           return (
             <div
-              className="tc-search__result"
+              className={`tc-search__result ${i === sel ? 'is-selected' : ''}`}
               key={`${r.boardId}:${r.nodeId}`}
+              ref={i === sel ? selRef : undefined}
               onClick={() => onOpenSnippet(r.boardId, r.nodeId)}
+              onMouseEnter={() => setSel(i)}
               title={onThisBoard ? 'Go to this note' : `Open “${r.boardName}” at this note`}
             >
               <div className="tc-search__rtop">

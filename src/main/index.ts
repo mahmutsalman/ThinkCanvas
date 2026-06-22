@@ -123,16 +123,32 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
-  openDatabase() // before IPC — the snippet handlers depend on it
-  registerBoardIpc()
-  registerSnippetIpc()
-  createWindow()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// Single-instance lock: if another ThinkCanvas is already running, quit this
+// one immediately and focus the existing window instead of opening a second
+// instance (prevents duplicate windows/processes).
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
   })
-})
+
+  app.whenReady().then(() => {
+    openDatabase() // before IPC — the snippet handlers depend on it
+    registerBoardIpc()
+    registerSnippetIpc()
+    createWindow()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
