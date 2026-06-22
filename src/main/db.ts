@@ -39,6 +39,8 @@ export type SearchResult = {
   excerpt?: string
 }
 
+export type TagInfo = { name: string; count: number; lastUsed: number }
+
 let db: Database.Database | null = null
 
 const dbPath = (): string => join(app.getPath('userData'), 'thinkcanvas.db')
@@ -250,11 +252,23 @@ export function searchByText(query: string): SearchResult[] {
   return rows.map((r) => ({ ...rowToResult(r), excerpt: (r.excerpt as string) ?? undefined }))
 }
 
-export function listTags(): string[] {
-  const rows = getDb()
-    .prepare('SELECT name FROM tags ORDER BY name COLLATE NOCASE')
-    .all() as Array<{ name: string }>
-  return rows.map((r) => r.name)
+// Tags currently in use, ranked for autocomplete: most-used first, ties broken
+// by most-recently-used. `count` = how many snippets carry the tag (frequency,
+// from the snippet_tags junction). `lastUsed` = newest save of any snippet with
+// it (recency, from snippets.updated_at). Both derived — no extra table needed.
+export function listTags(): TagInfo[] {
+  return getDb()
+    .prepare(
+      `SELECT t.name AS name,
+              COUNT(st.node_id) AS count,
+              COALESCE(MAX(s.updated_at), 0) AS lastUsed
+       FROM tags t
+       JOIN snippet_tags st ON st.tag_id = t.id
+       JOIN snippets s ON s.node_id = st.node_id
+       GROUP BY t.id
+       ORDER BY count DESC, lastUsed DESC, t.name COLLATE NOCASE ASC`
+    )
+    .all() as TagInfo[]
 }
 
 function rowToResult(r: Record<string, unknown>): SearchResult {

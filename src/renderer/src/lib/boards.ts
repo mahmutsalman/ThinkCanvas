@@ -34,6 +34,9 @@ export type SearchResult = {
 
 export type SearchMode = 'tag' | 'text'
 
+// A tag plus its usage stats, for the ranked tag filter (mirrors main/db.ts).
+export type TagInfo = { name: string; count: number; lastUsed: number }
+
 declare global {
   interface Window {
     boards: {
@@ -44,7 +47,7 @@ declare global {
     }
     snippets: {
       search: (query: string, mode: SearchMode) => Promise<SearchResult[]>
-      listTags: () => Promise<string[]>
+      listTags: () => Promise<TagInfo[]>
     }
   }
 }

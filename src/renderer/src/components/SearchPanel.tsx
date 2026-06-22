@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import type { SearchMode, SearchResult } from '../lib/boards'
+import type { SearchMode, SearchResult, TagInfo } from '../lib/boards'
 
 type Props = {
   currentBoardId: string | null
   onOpenSnippet: (boardId: string, nodeId: string) => void
   onClose: () => void
 }
+
+// Cap how many tag chips we render at once (filter narrows it as you type).
+const MAX_SUGGEST = 60
 
 const firstLines = (code: string, n = 6): string =>
   code.split('\n').slice(0, n).join('\n').trim()
@@ -34,11 +37,12 @@ export default function SearchPanel({
   onClose
 }: Props): JSX.Element {
   const [mode, setMode] = useState<SearchMode>('text')
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState('') // text mode: search term; tag mode: tag filter
   const [results, setResults] = useState<SearchResult[]>([])
-  const [allTags, setAllTags] = useState<string[]>([])
+  const [tagInfos, setTagInfos] = useState<TagInfo[]>([]) // ranked tags (usage+recency)
+  const [activeTag, setActiveTag] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
-  const [sel, setSel] = useState(0) // keyboard-highlighted result
+  const [sel, setSel] = useState(-1) // keyboard-highlighted result
   const inputRef = useRef<HTMLInputElement>(null)
   const selRef = useRef<HTMLDivElement>(null)
 
@@ -47,13 +51,16 @@ export default function SearchPanel({
     inputRef.current?.focus()
   }, [])
 
-  // Load the tag dictionary (for the clickable tag filter in tag mode).
+  // (Re)load the ranked tag list whenever we enter tag mode, so counts/recency
+  // reflect the latest edits.
   useEffect(() => {
-    void window.snippets.listTags().then(setAllTags)
-  }, [])
+    if (mode === 'tag') void window.snippets.listTags().then(setTagInfos)
+  }, [mode])
 
-  // Debounced live search as the query (or mode) changes.
+  // Text mode: debounced live full-text search as the query changes. (Tag mode
+  // doesn't search on type — typing filters the tag list; picking a tag searches.)
   useEffect(() => {
+    if (mode !== 'text') return
     const q = query.trim()
     if (!q) {
       setResults([])
@@ -61,7 +68,7 @@ export default function SearchPanel({
       return
     }
     const t = setTimeout(async () => {
-      const r = await window.snippets.search(q, mode)
+      const r = await window.snippets.search(q, 'text')
       setResults(r)
       setSearched(true)
       setSel(-1) // nothing selected yet; first ↓ opens the top match
@@ -74,10 +81,37 @@ export default function SearchPanel({
     selRef.current?.scrollIntoView({ block: 'nearest' })
   }, [sel])
 
-  // Navigate to a result but KEEP focus in the search box, so arrow keys + Enter
-  // keep cycling results instead of the canvas/note swallowing them.
+  // Filter the ranked tags by what's typed (substring, case-insensitive). The
+  // list is already ordered by usage then recency from SQL.
+  const tagFilter = query.trim().toLowerCase()
+  const suggestions =
+    mode === 'tag' ? tagInfos.filter((t) => !tagFilter || t.name.includes(tagFilter)) : []
+  const shownSuggestions = suggestions.slice(0, MAX_SUGGEST)
+
+  // Navigate to a result but KEEP focus in the search box, so arrow keys keep
+  // cycling results instead of the canvas/note swallowing them.
   const openResult = (r: SearchResult): void => {
     onOpenSnippet(r.boardId, r.nodeId)
+    inputRef.current?.focus()
+  }
+
+  // Tag mode: pick a tag → search snippets carrying it.
+  const runTagSearch = async (tag: string): Promise<void> => {
+    setActiveTag(tag)
+    setSel(-1)
+    const r = await window.snippets.search(tag, 'tag')
+    setResults(r)
+    setSearched(true)
+    inputRef.current?.focus()
+  }
+
+  const switchMode = (m: SearchMode): void => {
+    setMode(m)
+    setQuery('')
+    setResults([])
+    setSearched(false)
+    setSel(-1)
+    setActiveTag(null)
     inputRef.current?.focus()
   }
 
@@ -99,16 +133,15 @@ export default function SearchPanel({
       setSel(next)
       openResult(results[next])
     } else if (e.key === 'Enter') {
-      const r = results[sel] ?? results[0]
-      if (!r) return
       e.preventDefault()
-      openResult(r)
+      if (results[sel]) {
+        openResult(results[sel])
+      } else if (mode === 'tag' && shownSuggestions[0]) {
+        void runTagSearch(shownSuggestions[0].name) // Enter picks the top tag
+      } else if (results[0]) {
+        openResult(results[0])
+      }
     }
-  }
-
-  const pickTag = (tag: string): void => {
-    setMode('tag')
-    setQuery(tag)
   }
 
   return (
@@ -123,16 +156,10 @@ export default function SearchPanel({
       </div>
 
       <div className="tc-search__modes">
-        <button
-          className={mode === 'text' ? 'is-active' : ''}
-          onClick={() => setMode('text')}
-        >
+        <button className={mode === 'text' ? 'is-active' : ''} onClick={() => switchMode('text')}>
           Text
         </button>
-        <button
-          className={mode === 'tag' ? 'is-active' : ''}
-          onClick={() => setMode('tag')}
-        >
+        <button className={mode === 'tag' ? 'is-active' : ''} onClick={() => switchMode('tag')}>
           Tag
         </button>
       </div>
@@ -142,25 +169,44 @@ export default function SearchPanel({
         className="tc-search__input"
         value={query}
         spellCheck={false}
-        placeholder={mode === 'text' ? 'literal text inside code…' : 'tag, e.g. greedy hashmap'}
+        placeholder={mode === 'text' ? 'literal text inside code…' : 'filter tags…'}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={onKey}
       />
 
-      {mode === 'tag' && allTags.length > 0 && (
+      {mode === 'tag' && (
         <div className="tc-search__taglist">
-          {allTags.map((t) => (
-            <button key={t} className="tc-search__tagchip" onClick={() => pickTag(t)}>
-              #{t}
-            </button>
-          ))}
+          {shownSuggestions.length === 0 ? (
+            <span className="tc-search__tagempty">
+              {tagInfos.length ? 'No tags match.' : 'No tags yet — add some on a code note.'}
+            </span>
+          ) : (
+            <>
+              {shownSuggestions.map((t) => (
+                <button
+                  key={t.name}
+                  className={`tc-search__tagchip ${t.name === activeTag ? 'is-active' : ''}`}
+                  // Keep focus in the box so typing keeps filtering.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => void runTagSearch(t.name)}
+                  title={`${t.count} snippet${t.count === 1 ? '' : 's'}`}
+                >
+                  #{t.name}
+                  <span className="tc-search__tagcount">{t.count}</span>
+                </button>
+              ))}
+              {suggestions.length > MAX_SUGGEST && (
+                <span className="tc-search__tagmore">
+                  +{suggestions.length - MAX_SUGGEST} more — keep typing
+                </span>
+              )}
+            </>
+          )}
         </div>
       )}
 
       <div className="tc-search__results">
-        {searched && results.length === 0 && (
-          <div className="tc-search__empty">No matches.</div>
-        )}
+        {searched && results.length === 0 && <div className="tc-search__empty">No matches.</div>}
         {results.map((r, i) => {
           const heading = r.title?.trim() || firstLines(r.code, 1) || '(untitled)'
           const onThisBoard = r.boardId === currentBoardId
