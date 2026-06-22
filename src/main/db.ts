@@ -72,9 +72,9 @@ export function closeDatabase(): void {
 
 // --- Schema (v1) ---------------------------------------------------------
 function migrate(d: Database.Database): void {
-  const version = (d.pragma('user_version', { simple: true }) as number) ?? 0
-  if (version >= 1) return
+  let version = (d.pragma('user_version', { simple: true }) as number) ?? 0
 
+  if (version < 1) {
   d.exec(`
     CREATE TABLE IF NOT EXISTS snippets (
       node_id     TEXT PRIMARY KEY,
@@ -129,7 +129,22 @@ function migrate(d: Database.Database): void {
       VALUES (new.rowid, new.title, new.code);
     END;
   `)
-  d.pragma('user_version = 1')
+    d.pragma('user_version = 1')
+    version = 1
+  }
+
+  // v2: track when each tag↔snippet link was assigned, so we can rank tags by
+  // true recency (last assignment), independent of unrelated board saves.
+  if (version < 2) {
+    d.exec(`
+      ALTER TABLE snippet_tags ADD COLUMN assigned_at INTEGER NOT NULL DEFAULT 0;
+      UPDATE snippet_tags SET assigned_at = COALESCE(
+        (SELECT updated_at FROM snippets WHERE snippets.node_id = snippet_tags.node_id), 0
+      );
+    `)
+    d.pragma('user_version = 2')
+    version = 2
+  }
 }
 
 // --- Sync: mirror a board's code notes into the index --------------------
@@ -149,10 +164,26 @@ export function syncBoardSnippets(board: SyncBoard): void {
   const insTag = d.prepare('INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO NOTHING')
   const tagId = d.prepare('SELECT id FROM tags WHERE name = ? COLLATE NOCASE')
   const linkTag = d.prepare(
-    'INSERT OR IGNORE INTO snippet_tags (node_id, tag_id) VALUES (?, ?)'
+    'INSERT OR IGNORE INTO snippet_tags (node_id, tag_id, assigned_at) VALUES (?, ?, ?)'
+  )
+  const priorLinks = d.prepare(
+    `SELECT st.node_id AS node_id, st.tag_id AS tag_id, st.assigned_at AS assigned_at
+     FROM snippet_tags st JOIN snippets s ON s.node_id = st.node_id
+     WHERE s.board_id = ?`
   )
 
   const run = d.transaction((b: SyncBoard) => {
+    // Remember when each existing link was assigned BEFORE we delete+reinsert,
+    // so re-saving a board doesn't reset the recency of tags already on it.
+    const priorAt = new Map<string, number>()
+    for (const r of priorLinks.all(b.id) as Array<{
+      node_id: string
+      tag_id: number
+      assigned_at: number
+    }>) {
+      priorAt.set(`${r.node_id}:${r.tag_id}`, r.assigned_at)
+    }
+
     delSnips.run(b.id)
     for (const node of b.nodes ?? []) {
       if (node.type !== 'code') continue
@@ -173,7 +204,12 @@ export function syncBoardSnippets(board: SyncBoard): void {
         if (!name) continue
         insTag.run(name)
         const row = tagId.get(name) as { id: number } | undefined
-        if (row) linkTag.run(node.id, row.id)
+        if (row) {
+          // Keep the original assignment time for existing links; stamp `now`
+          // only for a genuinely new tag↔snippet pairing.
+          const at = priorAt.get(`${node.id}:${row.id}`) ?? now
+          linkTag.run(node.id, row.id, at)
+        }
       }
     }
   })
@@ -261,10 +297,9 @@ export function listTags(): TagInfo[] {
     .prepare(
       `SELECT t.name AS name,
               COUNT(st.node_id) AS count,
-              COALESCE(MAX(s.updated_at), 0) AS lastUsed
+              COALESCE(MAX(st.assigned_at), 0) AS lastUsed
        FROM tags t
        JOIN snippet_tags st ON st.tag_id = t.id
-       JOIN snippets s ON s.node_id = st.node_id
        GROUP BY t.id
        ORDER BY count DESC, lastUsed DESC, t.name COLLATE NOCASE ASC`
     )

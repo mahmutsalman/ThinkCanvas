@@ -13,6 +13,24 @@ const MAX_SUGGEST = 60
 const firstLines = (code: string, n = 6): string =>
   code.split('\n').slice(0, n).join('\n').trim()
 
+// Compact "time ago" for a tag's last-assigned timestamp.
+function relTime(ms: number): string {
+  if (!ms) return ''
+  const s = Math.max(0, Math.floor((Date.now() - ms) / 1000))
+  if (s < 45) return 'just now'
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  if (d < 7) return `${d}d ago`
+  const w = Math.floor(d / 7)
+  if (w < 5) return `${w}w ago`
+  const mo = Math.floor(d / 30)
+  if (mo < 12) return `${mo}mo ago`
+  return `${Math.floor(d / 365)}y ago`
+}
+
 // Render an FTS5 excerpt, turning the ⟦…⟧ match markers into <mark> spans.
 function Excerpt({ text }: { text: string }): JSX.Element {
   const segs = text.split(/⟦|⟧/)
@@ -43,8 +61,17 @@ export default function SearchPanel({
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
   const [sel, setSel] = useState(-1) // keyboard-highlighted result
+  const [tagSort, setTagSort] = useState<'used' | 'recent'>(() =>
+    localStorage.getItem('thinkcanvas:tagSort') === 'recent' ? 'recent' : 'used'
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const selRef = useRef<HTMLDivElement>(null)
+
+  const setTagSortPersist = (s: 'used' | 'recent'): void => {
+    setTagSort(s)
+    localStorage.setItem('thinkcanvas:tagSort', s)
+    inputRef.current?.focus()
+  }
 
   // Focus the search box as soon as the panel opens.
   useEffect(() => {
@@ -81,11 +108,20 @@ export default function SearchPanel({
     selRef.current?.scrollIntoView({ block: 'nearest' })
   }, [sel])
 
-  // Filter the ranked tags by what's typed (substring, case-insensitive). The
-  // list is already ordered by usage then recency from SQL.
+  // Sort the tags by the chosen lens — 'used' (frequency: which topics recur)
+  // or 'recent' (last assignment: what you studied lately) — then filter by
+  // what's typed (substring, case-insensitive).
   const tagFilter = query.trim().toLowerCase()
+  const sortedTags =
+    tagSort === 'recent'
+      ? [...tagInfos].sort(
+          (a, b) => b.lastUsed - a.lastUsed || b.count - a.count || a.name.localeCompare(b.name)
+        )
+      : [...tagInfos].sort(
+          (a, b) => b.count - a.count || b.lastUsed - a.lastUsed || a.name.localeCompare(b.name)
+        )
   const suggestions =
-    mode === 'tag' ? tagInfos.filter((t) => !tagFilter || t.name.includes(tagFilter)) : []
+    mode === 'tag' ? sortedTags.filter((t) => !tagFilter || t.name.includes(tagFilter)) : []
   const shownSuggestions = suggestions.slice(0, MAX_SUGGEST)
 
   // Navigate to a result but KEEP focus in the search box, so arrow keys keep
@@ -175,34 +211,60 @@ export default function SearchPanel({
       />
 
       {mode === 'tag' && (
-        <div className="tc-search__taglist">
-          {shownSuggestions.length === 0 ? (
-            <span className="tc-search__tagempty">
-              {tagInfos.length ? 'No tags match.' : 'No tags yet — add some on a code note.'}
-            </span>
-          ) : (
-            <>
-              {shownSuggestions.map((t) => (
-                <button
-                  key={t.name}
-                  className={`tc-search__tagchip ${t.name === activeTag ? 'is-active' : ''}`}
-                  // Keep focus in the box so typing keeps filtering.
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => void runTagSearch(t.name)}
-                  title={`${t.count} snippet${t.count === 1 ? '' : 's'}`}
-                >
-                  #{t.name}
-                  <span className="tc-search__tagcount">{t.count}</span>
-                </button>
-              ))}
-              {suggestions.length > MAX_SUGGEST && (
-                <span className="tc-search__tagmore">
-                  +{suggestions.length - MAX_SUGGEST} more — keep typing
-                </span>
-              )}
-            </>
-          )}
-        </div>
+        <>
+          <div className="tc-search__tagsort">
+            <span className="tc-search__tagsortlabel">sort</span>
+            <button
+              className={tagSort === 'used' ? 'is-active' : ''}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setTagSortPersist('used')}
+              title="Tags used in the most snippets first"
+            >
+              Most used
+            </button>
+            <button
+              className={tagSort === 'recent' ? 'is-active' : ''}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setTagSortPersist('recent')}
+              title="Tags you assigned most recently first"
+            >
+              Recent
+            </button>
+          </div>
+          <div className="tc-search__taglist">
+            {shownSuggestions.length === 0 ? (
+              <span className="tc-search__tagempty">
+                {tagInfos.length ? 'No tags match.' : 'No tags yet — add some on a code note.'}
+              </span>
+            ) : (
+              <>
+                {shownSuggestions.map((t) => (
+                  <button
+                    key={t.name}
+                    className={`tc-search__tagchip ${t.name === activeTag ? 'is-active' : ''}`}
+                    // Keep focus in the box so typing keeps filtering.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => void runTagSearch(t.name)}
+                    title={`${t.count} snippet${t.count === 1 ? '' : 's'} · last used ${
+                      relTime(t.lastUsed) || 'n/a'
+                    }`}
+                  >
+                    #{t.name}
+                    {tagSort === 'recent' && t.lastUsed > 0 && (
+                      <span className="tc-search__tagwhen">{relTime(t.lastUsed)}</span>
+                    )}
+                    <span className="tc-search__tagcount">{t.count}</span>
+                  </button>
+                ))}
+                {suggestions.length > MAX_SUGGEST && (
+                  <span className="tc-search__tagmore">
+                    +{suggestions.length - MAX_SUGGEST} more — keep typing
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        </>
       )}
 
       <div className="tc-search__results">

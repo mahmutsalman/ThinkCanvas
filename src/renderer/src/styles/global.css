@@ -930,6 +930,36 @@ body,
   border-color: var(--accent);
 }
 
+.tc-search__tagsort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 6px;
+}
+
+.tc-search__tagsortlabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-dim);
+}
+
+.tc-search__tagsort button {
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+
+.tc-search__tagsort button.is-active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .tc-search__taglist {
   display: flex;
   flex-wrap: wrap;
@@ -938,6 +968,11 @@ body,
   padding: 0 12px 8px;
   max-height: 132px;
   overflow-y: auto;
+}
+
+.tc-search__tagwhen {
+  font-size: 9px;
+  opacity: 0.75;
 }
 
 .tc-search__tagchip {
