@@ -38,10 +38,28 @@ export function emptyBoard(name = 'Untitled'): Board {
   return { id: newBoardId(), name, createdAt: now, updatedAt: now, nodes: [], edges: [] }
 }
 
-// Reset transient per-node UI state (editing flag) when loading from disk.
+// Strip transient interaction state that must never persist between sessions:
+// `selected`/`dragging` on nodes and `selected` on edges. Leaving `selected`
+// in a saved board makes a note re-open pre-selected — which, for code notes,
+// suppresses the pan-through shield and makes two-finger panning stall over it.
+export function stripTransient(nodes: Node[], edges: Edge[]): { nodes: Node[]; edges: Edge[] } {
+  const cleanNodes = nodes.map((n) => {
+    const { selected: _s, dragging: _d, ...rest } = n
+    return rest as Node
+  })
+  const cleanEdges = edges.map((e) => {
+    const { selected: _s, ...rest } = e
+    return rest as Edge
+  })
+  return { nodes: cleanNodes, edges: cleanEdges }
+}
+
+// Clean a board loaded from disk: drop transient interaction state and reset
+// the text-note editing flag.
 export function sanitizeBoard(board: Board): Board {
-  const nodes = (board.nodes ?? []).map((n) =>
+  const stripped = stripTransient(board.nodes ?? [], board.edges ?? [])
+  const nodes = stripped.nodes.map((n) =>
     n.type === 'text' ? { ...n, data: { ...n.data, editing: false } } : n
   )
-  return { ...board, nodes, edges: board.edges ?? [] }
+  return { ...board, nodes, edges: stripped.edges }
 }

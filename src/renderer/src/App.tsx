@@ -27,6 +27,7 @@ import {
   emptyBoard,
   newBoardId,
   sanitizeBoard,
+  stripTransient,
   type Board,
   type BoardMeta
 } from './lib/boards'
@@ -87,6 +88,10 @@ function Flow(): JSX.Element {
   mruRef.current = mru
   const cursorRef = useRef(cursor)
   cursorRef.current = cursor
+  // The code note the user is currently "on" (last cycled-to OR clicked). Used
+  // to route Enter, independently of React Flow selection or focus, so a stale
+  // editor focus can't misdirect it.
+  const activeCodeId = useRef<string | null>(null)
   // Board (multi-document) state.
   const [boardId, setBoardId] = useState<string | null>(null)
   const [boardName, setBoardName] = useState('Untitled')
@@ -120,13 +125,14 @@ function Flow(): JSX.Element {
   const saveCurrentNow = useCallback(async (): Promise<void> => {
     const id = boardIdRef.current
     if (!id) return
+    const clean = stripTransient(nodesRef.current, edgesRef.current)
     await window.boards.save({
       id,
       name: boardNameRef.current,
       createdAt: createdAtRef.current,
       updatedAt: Date.now(),
-      nodes: nodesRef.current,
-      edges: edgesRef.current
+      nodes: clean.nodes,
+      edges: clean.edges
     })
   }, [])
 
@@ -157,13 +163,14 @@ function Flow(): JSX.Element {
   useEffect(() => {
     if (!hydrated.current || !boardId) return
     const t = setTimeout(() => {
+      const clean = stripTransient(nodes, edges)
       void window.boards.save({
         id: boardId,
         name: boardName,
         createdAt: createdAtRef.current,
         updatedAt: Date.now(),
-        nodes,
-        edges
+        nodes: clean.nodes,
+        edges: clean.edges
       })
     }, 500)
     return () => clearTimeout(t)
@@ -273,6 +280,7 @@ function Flow(): JSX.Element {
     (nodeId: string) => {
       const node = nodesRef.current.find((n) => n.id === nodeId)
       if (!node) return
+      activeCodeId.current = nodeId
       setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === nodeId })))
       const w = node.measured?.width ?? (typeof node.width === 'number' ? node.width : 240)
       const h = node.measured?.height ?? (typeof node.height === 'number' ? node.height : 200)
@@ -312,13 +320,23 @@ function Flow(): JSX.Element {
         setCursor(next)
         focusCodeNote(list[next])
       } else if (e.key === 'Enter') {
-        if (typing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
-        const sel = nodesRef.current.find((n) => n.selected && n.type === 'code')
-        if (!sel) return
-        const ed = getEditor(sel.id)
+        if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
+        const tag = active?.tagName
+        if (tag === 'INPUT') return // board-title / edge-label inputs own Enter
+        const inMonaco = !!active?.closest('.monaco-editor')
+        if (tag === 'TEXTAREA' && !inMonaco) return // a text note's editor owns Enter
+        const id = activeCodeId.current
+        if (!id) return
+        const node = nodesRef.current.find((n) => n.id === id && n.type === 'code')
+        if (!node) return
+        const ed = getEditor(id)
         if (!ed) return
+        // If THIS note's editor already has focus, let Monaco handle Enter
+        // (newline). Otherwise dive in — even if a *different* (stale) editor
+        // currently holds focus. This is the bug fix.
+        if (ed.hasTextFocus()) return
         e.preventDefault()
-        ed.focus() // Monaco restores the last cursor position on focus
+        ed.focus() // blurs any stale editor; Monaco restores this note's cursor
       }
     }
     window.addEventListener('keydown', onKey)
@@ -437,8 +455,12 @@ function Flow(): JSX.Element {
     (_, node) => {
       // Auto-track code notes in the MRU cycler: move this one to the top.
       if (node.type === 'code') {
+        activeCodeId.current = node.id
         setMru((prev) => [node.id, ...prev.filter((i) => i !== node.id)].slice(0, MAX_MRU))
         setCursor(0)
+      } else {
+        // Clicking a non-code note means Enter shouldn't dive into a stale one.
+        activeCodeId.current = null
       }
       const current = nodesRef.current.find((n) => n.id === node.id)
       if (current?.selected) return
@@ -465,7 +487,10 @@ function Flow(): JSX.Element {
     setMenu({ x: e.clientX, y: e.clientY, edgeId: edge.id })
   }, [])
 
-  const onPaneClick = useCallback(() => setMenu(null), [])
+  const onPaneClick = useCallback(() => {
+    setMenu(null)
+    activeCodeId.current = null // clicking empty canvas clears the current note
+  }, [])
 
   const textCount = nodes.length
 
