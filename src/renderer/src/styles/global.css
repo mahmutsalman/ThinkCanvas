@@ -967,6 +967,13 @@ body,
   border: 1px solid var(--border);
   border-radius: 9px;
   padding: 9px 10px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, transform 0.08s ease;
+}
+
+.tc-search__result:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .tc-search__rtop {
@@ -1047,15 +1054,14 @@ body,
 
 .tc-search__open {
   flex: 0 0 auto;
-  background: transparent;
   color: var(--accent);
   border: 1px solid var(--accent);
   border-radius: 6px;
   font-size: 11px;
   padding: 3px 9px;
-  cursor: pointer;
+  background: transparent;
 }
 
-.tc-search__open:hover {
+.tc-search__result:hover .tc-search__open {
   background: var(--accent-soft);
 }

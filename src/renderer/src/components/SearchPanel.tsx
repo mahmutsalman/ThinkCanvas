@@ -132,7 +132,12 @@ export default function SearchPanel({
           const heading = r.title?.trim() || firstLines(r.code, 1) || '(untitled)'
           const onThisBoard = r.boardId === currentBoardId
           return (
-            <div className="tc-search__result" key={`${r.boardId}:${r.nodeId}`}>
+            <div
+              className="tc-search__result"
+              key={`${r.boardId}:${r.nodeId}`}
+              onClick={() => onOpenSnippet(r.boardId, r.nodeId)}
+              title={onThisBoard ? 'Go to this note' : `Open “${r.boardName}” at this note`}
+            >
               <div className="tc-search__rtop">
                 <span className="tc-search__lang">{r.language || 'code'}</span>
                 <span className="tc-search__heading" title={heading}>
@@ -157,12 +162,9 @@ export default function SearchPanel({
                 <span className="tc-search__board" title={`Board: ${r.boardName}`}>
                   {onThisBoard ? 'this board' : r.boardName}
                 </span>
-                <button
-                  className="tc-search__open"
-                  onClick={() => onOpenSnippet(r.boardId, r.nodeId)}
-                >
-                  {onThisBoard ? 'Go to' : 'Open board'}
-                </button>
+                <span className="tc-search__open" aria-hidden="true">
+                  {onThisBoard ? 'Go to ›' : 'Open board ›'}
+                </span>
               </div>
             </div>
           )
