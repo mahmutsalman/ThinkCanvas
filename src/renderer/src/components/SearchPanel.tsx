@@ -1,0 +1,173 @@
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import type { SearchMode, SearchResult } from '../lib/boards'
+
+type Props = {
+  currentBoardId: string | null
+  onOpenSnippet: (boardId: string, nodeId: string) => void
+  onClose: () => void
+}
+
+const firstLines = (code: string, n = 6): string =>
+  code.split('\n').slice(0, n).join('\n').trim()
+
+// Render an FTS5 excerpt, turning the ⟦…⟧ match markers into <mark> spans.
+function Excerpt({ text }: { text: string }): JSX.Element {
+  const segs = text.split(/⟦|⟧/)
+  return (
+    <code className="tc-search__code">
+      {segs.map((s, i) =>
+        i % 2 === 1 ? (
+          <mark key={i} className="tc-search__hit">
+            {s}
+          </mark>
+        ) : (
+          <span key={i}>{s}</span>
+        )
+      )}
+    </code>
+  )
+}
+
+export default function SearchPanel({
+  currentBoardId,
+  onOpenSnippet,
+  onClose
+}: Props): JSX.Element {
+  const [mode, setMode] = useState<SearchMode>('text')
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [allTags, setAllTags] = useState<string[]>([])
+  const [searched, setSearched] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Focus the search box as soon as the panel opens.
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  // Load the tag dictionary (for the clickable tag filter in tag mode).
+  useEffect(() => {
+    void window.snippets.listTags().then(setAllTags)
+  }, [])
+
+  // Debounced live search as the query (or mode) changes.
+  useEffect(() => {
+    const q = query.trim()
+    if (!q) {
+      setResults([])
+      setSearched(false)
+      return
+    }
+    const t = setTimeout(async () => {
+      const r = await window.snippets.search(q, mode)
+      setResults(r)
+      setSearched(true)
+    }, 220)
+    return () => clearTimeout(t)
+  }, [query, mode])
+
+  const onKey = (e: KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      onClose()
+    }
+  }
+
+  const pickTag = (tag: string): void => {
+    setMode('tag')
+    setQuery(tag)
+  }
+
+  return (
+    <div className="tc-search">
+      <div className="tc-search__head">
+        <span className="tc-search__title">Search snippets</span>
+        <div className="tc-search__spacer" />
+        <button className="tc-search__close" onClick={onClose} title="Close (Esc)">
+          ✕
+        </button>
+      </div>
+
+      <div className="tc-search__modes">
+        <button
+          className={mode === 'text' ? 'is-active' : ''}
+          onClick={() => setMode('text')}
+        >
+          Text
+        </button>
+        <button
+          className={mode === 'tag' ? 'is-active' : ''}
+          onClick={() => setMode('tag')}
+        >
+          Tag
+        </button>
+      </div>
+
+      <input
+        ref={inputRef}
+        className="tc-search__input"
+        value={query}
+        spellCheck={false}
+        placeholder={mode === 'text' ? 'literal text inside code…' : 'tag, e.g. greedy hashmap'}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={onKey}
+      />
+
+      {mode === 'tag' && allTags.length > 0 && (
+        <div className="tc-search__taglist">
+          {allTags.map((t) => (
+            <button key={t} className="tc-search__tagchip" onClick={() => pickTag(t)}>
+              #{t}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="tc-search__results">
+        {searched && results.length === 0 && (
+          <div className="tc-search__empty">No matches.</div>
+        )}
+        {results.map((r) => {
+          const heading = r.title?.trim() || firstLines(r.code, 1) || '(untitled)'
+          const onThisBoard = r.boardId === currentBoardId
+          return (
+            <div className="tc-search__result" key={`${r.boardId}:${r.nodeId}`}>
+              <div className="tc-search__rtop">
+                <span className="tc-search__lang">{r.language || 'code'}</span>
+                <span className="tc-search__heading" title={heading}>
+                  {heading}
+                </span>
+              </div>
+              {r.excerpt ? (
+                <Excerpt text={r.excerpt} />
+              ) : (
+                <code className="tc-search__code">{firstLines(r.code)}</code>
+              )}
+              {r.tags.length > 0 && (
+                <div className="tc-search__rtags">
+                  {r.tags.map((t) => (
+                    <span key={t} className="tc-search__rtag">
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="tc-search__rfoot">
+                <span className="tc-search__board" title={`Board: ${r.boardName}`}>
+                  {onThisBoard ? 'this board' : r.boardName}
+                </span>
+                <button
+                  className="tc-search__open"
+                  onClick={() => onOpenSnippet(r.boardId, r.nodeId)}
+                >
+                  {onThisBoard ? 'Go to' : 'Open board'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

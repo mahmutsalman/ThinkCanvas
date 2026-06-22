@@ -22,6 +22,7 @@ import TextNode from './components/TextNode'
 import CodeNode from './components/CodeNode'
 import FloatingEdge from './components/FloatingEdge'
 import Library from './components/Library'
+import SearchPanel from './components/SearchPanel'
 import { getEditor } from './lib/codeEditors'
 import {
   emptyBoard,
@@ -97,6 +98,10 @@ function Flow(): JSX.Element {
   const [boardName, setBoardName] = useState('Untitled')
   const [boardList, setBoardList] = useState<BoardMeta[]>([])
   const [libraryOpen, setLibraryOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  // When a search result lives on another board, remember which note to center
+  // once that board's nodes have hydrated.
+  const pendingFocus = useRef<string | null>(null)
   const hydrated = useRef(false)
   const createdAtRef = useRef<number>(Date.now())
   const boardNameRef = useRef(boardName)
@@ -289,6 +294,30 @@ function Flow(): JSX.Element {
     [setNodes, setCenter, getZoom]
   )
 
+  // After a board switch from search, center the requested note once it exists.
+  useEffect(() => {
+    const target = pendingFocus.current
+    if (!target) return
+    if (nodes.some((n) => n.id === target && n.type === 'code')) {
+      pendingFocus.current = null
+      focusCodeNote(target)
+    }
+  }, [nodes, focusCodeNote])
+
+  // Open a snippet from the search panel: center it (same board) or switch to
+  // its board first and center once hydrated.
+  const openSnippet = useCallback(
+    async (targetBoardId: string, nodeId: string) => {
+      if (targetBoardId === boardIdRef.current) {
+        focusCodeNote(nodeId)
+        return
+      }
+      pendingFocus.current = nodeId
+      await switchBoard(targetBoardId)
+    },
+    [focusCodeNote, switchBoard]
+  )
+
   // Drop ids from the cycler once their notes are deleted or converted to text.
   useEffect(() => {
     setMru((prev) => {
@@ -342,6 +371,18 @@ function Flow(): JSX.Element {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [focusCodeNote])
+
+  // Cmd/Ctrl+F toggles the search panel (works even from inside a code editor).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault()
+        setSearchOpen((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [])
 
   // Click a cycler chip → jump straight to that note.
   const jumpToChip = useCallback(
@@ -511,6 +552,9 @@ function Flow(): JSX.Element {
           />
         </div>
         <div className="tc-topbar__right">
+          <button onClick={() => setSearchOpen((v) => !v)} title="Search snippets (⌘F)">
+            Search
+          </button>
           <button onClick={openLibrary}>Boards</button>
           <button onClick={createBoard}>New</button>
           <span className="tc-topbar__sep" />
@@ -621,6 +665,14 @@ function Flow(): JSX.Element {
           onNew={createBoard}
           onDelete={deleteBoard}
           onClose={() => setLibraryOpen(false)}
+        />
+      )}
+
+      {searchOpen && (
+        <SearchPanel
+          currentBoardId={boardId}
+          onOpenSnippet={openSnippet}
+          onClose={() => setSearchOpen(false)}
         />
       )}
     </div>
