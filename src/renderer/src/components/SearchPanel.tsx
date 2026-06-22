@@ -74,6 +74,13 @@ export default function SearchPanel({
     selRef.current?.scrollIntoView({ block: 'nearest' })
   }, [sel])
 
+  // Navigate to a result but KEEP focus in the search box, so arrow keys + Enter
+  // keep cycling results instead of the canvas/note swallowing them.
+  const openResult = (r: SearchResult): void => {
+    onOpenSnippet(r.boardId, r.nodeId)
+    inputRef.current?.focus()
+  }
+
   const onKey = (e: KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Escape') {
       e.preventDefault()
@@ -91,7 +98,7 @@ export default function SearchPanel({
       const r = results[sel]
       if (!r) return
       e.preventDefault()
-      onOpenSnippet(r.boardId, r.nodeId)
+      openResult(r)
     }
   }
 
@@ -158,7 +165,10 @@ export default function SearchPanel({
               className={`tc-search__result ${i === sel ? 'is-selected' : ''}`}
               key={`${r.boardId}:${r.nodeId}`}
               ref={i === sel ? selRef : undefined}
-              onClick={() => onOpenSnippet(r.boardId, r.nodeId)}
+              // Prevent the mousedown from moving focus off the search box; the
+              // click still fires, so we navigate without losing keyboard control.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => openResult(r)}
               onMouseEnter={() => setSel(i)}
               title={onThisBoard ? 'Go to this note' : `Open “${r.boardName}” at this note`}
             >
