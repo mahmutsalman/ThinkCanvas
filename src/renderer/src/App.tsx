@@ -119,7 +119,11 @@ function Flow(): JSX.Element {
       setBoardName(clean.name)
       setNodes(clean.nodes)
       setEdges(clean.edges)
-      setMru([])
+      // Restore the saved cycler list, dropping any ids whose code note is gone.
+      const savedMru = (clean.mru ?? []).filter((id) =>
+        clean.nodes.some((n) => n.id === id && n.type === 'code')
+      )
+      setMru(savedMru)
       setCursor(-1)
       localStorage.setItem(LAST_BOARD_KEY, clean.id)
       hydrated.current = true
@@ -137,7 +141,8 @@ function Flow(): JSX.Element {
       createdAt: createdAtRef.current,
       updatedAt: Date.now(),
       nodes: clean.nodes,
-      edges: clean.edges
+      edges: clean.edges,
+      mru: mruRef.current
     })
   }, [])
 
@@ -175,11 +180,12 @@ function Flow(): JSX.Element {
         createdAt: createdAtRef.current,
         updatedAt: Date.now(),
         nodes: clean.nodes,
-        edges: clean.edges
+        edges: clean.edges,
+        mru
       })
     }, 500)
     return () => clearTimeout(t)
-  }, [nodes, edges, boardName, boardId])
+  }, [nodes, edges, boardName, boardId, mru])
 
   // --- board actions (library) ---------------------------------------------
   const openLibrary = useCallback(async () => {

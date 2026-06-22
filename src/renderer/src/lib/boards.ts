@@ -7,6 +7,9 @@ export type Board = {
   updatedAt: number
   nodes: Node[]
   edges: Edge[]
+  // Persisted most-recently-used code-note ids (the left-side cycler list), so
+  // the panel survives closing/reopening the board.
+  mru?: string[]
 }
 
 export type BoardMeta = {
