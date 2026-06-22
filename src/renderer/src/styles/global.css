@@ -26,6 +26,87 @@
   --accent-soft: rgba(204, 153, 0, 0.18);
 }
 
+/* Curated palettes mapped from renowned, contrast-tested color schemes.
+   Each steps the surfaces by lightness and pops a signature accent. */
+
+/* Nord — arctic blue-grays + frost accent */
+[data-theme='nord'] {
+  --bg: #2e3440;
+  --bg-elev: #353b49;
+  --bg-elev-2: #3b4252;
+  --border: #434c5e;
+  --border-strong: #4c566a;
+  --text: #eceff4;
+  --text-dim: #8b93a5;
+  --accent: #88c0d0;
+  --accent-soft: rgba(136, 192, 208, 0.18);
+}
+
+/* Dracula — dark slate + violet accent */
+[data-theme='dracula'] {
+  --bg: #282a36;
+  --bg-elev: #2f3140;
+  --bg-elev-2: #3a3d4d;
+  --border: #44475a;
+  --border-strong: #565a72;
+  --text: #f8f8f2;
+  --text-dim: #8b91be;
+  --accent: #bd93f9;
+  --accent-soft: rgba(189, 147, 249, 0.18);
+}
+
+/* Solarized Dark — teal-tinted dark + blue accent */
+[data-theme='solarized'] {
+  --bg: #002b36;
+  --bg-elev: #073642;
+  --bg-elev-2: #0c4350;
+  --border: #0f4b59;
+  --border-strong: #586e75;
+  --text: #d3e2e2;
+  --text-dim: #7d9396;
+  --accent: #268bd2;
+  --accent-soft: rgba(38, 139, 210, 0.18);
+}
+
+/* Tokyo Night — deep blue-violet + soft blue accent */
+[data-theme='tokyonight'] {
+  --bg: #1a1b26;
+  --bg-elev: #1f2335;
+  --bg-elev-2: #24283b;
+  --border: #2f344d;
+  --border-strong: #3b4261;
+  --text: #c0caf5;
+  --text-dim: #7982b0;
+  --accent: #7aa2f7;
+  --accent-soft: rgba(122, 162, 247, 0.18);
+}
+
+/* Gruvbox — warm browns + amber accent */
+[data-theme='gruvbox'] {
+  --bg: #282828;
+  --bg-elev: #32302f;
+  --bg-elev-2: #3c3836;
+  --border: #504945;
+  --border-strong: #665c54;
+  --text: #ebdbb2;
+  --text-dim: #a89984;
+  --accent: #fabd2f;
+  --accent-soft: rgba(250, 189, 47, 0.18);
+}
+
+/* Catppuccin Mocha — soft plum dark + mauve accent */
+[data-theme='catppuccin'] {
+  --bg: #1e1e2e;
+  --bg-elev: #292a3d;
+  --bg-elev-2: #313244;
+  --border: #45475a;
+  --border-strong: #585b70;
+  --text: #cdd6f4;
+  --text-dim: #a6adc8;
+  --accent: #cba6f7;
+  --accent-soft: rgba(203, 166, 247, 0.18);
+}
+
 * {
   box-sizing: border-box;
 }

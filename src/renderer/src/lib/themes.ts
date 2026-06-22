@@ -43,7 +43,13 @@ export const TOKEN_LABELS: Record<keyof ThemeTokens, string> = {
 // Built-in themes (their actual colors live in global.css as [data-theme] blocks).
 export const BUILTIN_THEMES = [
   { id: 'default', label: 'Midnight' },
-  { id: 'crimson', label: 'Crimson (by fligma)' }
+  { id: 'crimson', label: 'Crimson (by fligma)' },
+  { id: 'nord', label: 'Nord' },
+  { id: 'dracula', label: 'Dracula' },
+  { id: 'solarized', label: 'Solarized Dark' },
+  { id: 'tokyonight', label: 'Tokyo Night' },
+  { id: 'gruvbox', label: 'Gruvbox' },
+  { id: 'catppuccin', label: 'Catppuccin Mocha' }
 ] as const
 
 const CUSTOM_KEY = 'thinkcanvas:customThemes'
