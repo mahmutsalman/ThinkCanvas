@@ -14,7 +14,8 @@ import {
   type Edge,
   type Connection,
   type NodeMouseHandler,
-  type OnNodeDrag
+  type OnNodeDrag,
+  type Viewport
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -126,13 +127,18 @@ function Flow(): JSX.Element {
   // When a search result lives on another board, remember which note to center
   // once that board's nodes have hydrated.
   const pendingFocus = useRef<string | null>(null)
+  // Where the camera was when search opened — so "Back" can return there.
+  const searchOrigin = useRef<{ boardId: string | null; viewport: Viewport } | null>(null)
+  // Viewport to restore once a board switch (triggered by Back) finishes.
+  const pendingViewport = useRef<Viewport | null>(null)
   const hydrated = useRef(false)
   const createdAtRef = useRef<number>(Date.now())
   const boardNameRef = useRef(boardName)
   boardNameRef.current = boardName
   const boardIdRef = useRef(boardId)
   boardIdRef.current = boardId
-  const { screenToFlowPosition, getIntersectingNodes, setCenter, getZoom } = useReactFlow()
+  const { screenToFlowPosition, getIntersectingNodes, setCenter, getZoom, getViewport, setViewport } =
+    useReactFlow()
 
   // --- board load / save ---------------------------------------------------
   const openBoard = useCallback(
@@ -347,6 +353,35 @@ function Flow(): JSX.Element {
     },
     [focusCodeNote, switchBoard]
   )
+
+  // Snapshot where the camera was the moment search opens, so "Back" returns
+  // there after browsing results may have flown us across boards.
+  useEffect(() => {
+    if (searchOpen) {
+      searchOrigin.current = { boardId: boardIdRef.current, viewport: getViewport() }
+    }
+  }, [searchOpen, getViewport])
+
+  // Restore the saved viewport once a Back-triggered board switch has hydrated.
+  useEffect(() => {
+    if (pendingViewport.current) {
+      const vp = pendingViewport.current
+      pendingViewport.current = null
+      setViewport(vp, { duration: 400 })
+    }
+  }, [boardId, setViewport])
+
+  // Fly back to where we were when search opened (board + exact camera).
+  const goBackToOrigin = useCallback(async () => {
+    const origin = searchOrigin.current
+    if (!origin) return
+    if (origin.boardId && origin.boardId !== boardIdRef.current) {
+      pendingViewport.current = origin.viewport
+      await switchBoard(origin.boardId)
+    } else {
+      setViewport(origin.viewport, { duration: 400 })
+    }
+  }, [switchBoard, setViewport])
 
   // Drop ids from the cycler once their notes are deleted or converted to text.
   useEffect(() => {
@@ -717,6 +752,7 @@ function Flow(): JSX.Element {
         <SearchPanel
           currentBoardId={boardId}
           onOpenSnippet={openSnippet}
+          onBack={goBackToOrigin}
           onClose={() => setSearchOpen(false)}
         />
       )}

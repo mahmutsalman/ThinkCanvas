@@ -876,6 +876,22 @@ body,
   flex: 1 1 auto;
 }
 
+.tc-search__back {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 6px;
+  height: 24px;
+  font-size: 11px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.tc-search__back:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .tc-search__close {
   background: transparent;
   border: 1px solid var(--border);

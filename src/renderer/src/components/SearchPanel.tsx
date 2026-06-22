@@ -4,6 +4,7 @@ import type { SearchMode, SearchResult, TagInfo } from '../lib/boards'
 type Props = {
   currentBoardId: string | null
   onOpenSnippet: (boardId: string, nodeId: string) => void
+  onBack: () => void
   onClose: () => void
 }
 
@@ -52,6 +53,7 @@ function Excerpt({ text }: { text: string }): JSX.Element {
 export default function SearchPanel({
   currentBoardId,
   onOpenSnippet,
+  onBack,
   onClose
 }: Props): JSX.Element {
   const [mode, setMode] = useState<SearchMode>('text')
@@ -186,6 +188,18 @@ export default function SearchPanel({
         <span className="tc-search__title">Search snippets</span>
         <span className="tc-search__hint">↑↓ Enter</span>
         <div className="tc-search__spacer" />
+        <button
+          className="tc-search__back"
+          // Keep focus in the box so arrow keys keep working after going back.
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            onBack()
+            inputRef.current?.focus()
+          }}
+          title="Back to where you were when you opened search"
+        >
+          ↩ Back
+        </button>
         <button className="tc-search__close" onClick={onClose} title="Close (Esc)">
           ✕
         </button>
