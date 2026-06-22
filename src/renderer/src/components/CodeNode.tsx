@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import {
   Handle,
@@ -19,7 +19,12 @@ export type CodeNodeData = {
   code: string
   language: string
   cursor?: CursorPos
+  title?: string
+  tags?: string[]
 }
+
+// Normalize a tag: trim, drop a leading '#', lowercase (matches db.ts).
+const normTag = (raw: string): string => raw.trim().replace(/^#+/, '').toLowerCase()
 
 export type CodeNodeType = Node<CodeNodeData, 'code'>
 
@@ -29,6 +34,30 @@ const LANGUAGES = ['java', 'python', 'javascript', 'c', 'typescript', 'rust', 'c
 export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>) {
   const { updateNodeData, setNodes, setEdges, getViewport, setViewport } = useReactFlow()
   const bodyRef = useRef<HTMLDivElement>(null)
+  const [tagDraft, setTagDraft] = useState('')
+
+  const tags = data.tags ?? []
+
+  const addTag = (raw: string): void => {
+    const name = normTag(raw)
+    setTagDraft('')
+    if (!name || tags.includes(name)) return
+    updateNodeData(id, { tags: [...tags, name] })
+  }
+
+  const removeTag = (name: string): void => {
+    updateNodeData(id, { tags: tags.filter((t) => t !== name) })
+  }
+
+  const onTagKey = (e: KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      e.stopPropagation()
+      addTag(tagDraft)
+    } else if (e.key === 'Backspace' && !tagDraft && tags.length) {
+      removeTag(tags[tags.length - 1])
+    }
+  }
 
   // Cmd/Ctrl + wheel should zoom the canvas even while the cursor is inside the
   // editor. Monaco binds native wheel listeners, so a React handler can't stop
@@ -117,7 +146,14 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
             </option>
           ))}
         </select>
-        <div className="tc-code__spacer" />
+        <input
+          className="nodrag tc-code__title"
+          value={data.title ?? ''}
+          spellCheck={false}
+          placeholder="title / problem name…"
+          onChange={(e) => updateNodeData(id, { title: e.target.value })}
+          title="Title (searchable, shown in results)"
+        />
         <button className="nodrag tc-code__btn" onClick={toText} title="Convert to text note">
           T
         </button>
@@ -153,6 +189,31 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
           }}
         />
         {!selected && <div className="tc-code__shield" />}
+      </div>
+
+      {/* Inline tag chips: searchable across all boards. Lowercased + deduped. */}
+      <div className="nodrag tc-code__tags">
+        {tags.map((t) => (
+          <span key={t} className="tc-code__tag">
+            #{t}
+            <button
+              className="tc-code__tagx"
+              onClick={() => removeTag(t)}
+              title={`Remove #${t}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <input
+          className="tc-code__tagadd"
+          value={tagDraft}
+          spellCheck={false}
+          placeholder={tags.length ? '+ tag' : '+ tag (e.g. greedy)'}
+          onChange={(e) => setTagDraft(e.target.value)}
+          onKeyDown={onTagKey}
+          onBlur={() => addTag(tagDraft)}
+        />
       </div>
 
       <Handle type="source" position={Position.Top} className="tc-handle" />

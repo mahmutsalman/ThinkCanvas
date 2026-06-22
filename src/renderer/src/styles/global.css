@@ -252,6 +252,27 @@ body,
   flex: 1 1 auto;
 }
 
+.tc-code__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  border-bottom: 1px solid transparent;
+  font-size: 11px;
+  padding: 2px 2px;
+  outline: none;
+}
+
+.tc-code__title::placeholder {
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.tc-code__title:focus {
+  border-bottom-color: var(--border-strong);
+}
+
 .tc-code__btn {
   background: transparent;
   border: 1px solid var(--border);
@@ -289,6 +310,60 @@ body,
   z-index: 5;
   background: transparent;
   cursor: pointer;
+}
+
+/* Inline tag chip row (bottom of a code note) ---------------------------- */
+.tc-code__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  background: var(--bg-elev-2);
+  border-top: 1px solid var(--border);
+}
+
+.tc-code__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1px 4px 1px 5px;
+  white-space: nowrap;
+}
+
+.tc-code__tagx {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tc-code__tagx:hover {
+  opacity: 1;
+}
+
+.tc-code__tagadd {
+  flex: 1 1 60px;
+  min-width: 60px;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  font-size: 11px;
+  padding: 1px 2px;
+  outline: none;
+}
+
+.tc-code__tagadd::placeholder {
+  color: var(--text-dim);
+  opacity: 0.55;
 }
 
 /* Hidden connection handles (edges anchor here but draw border-to-border) */
