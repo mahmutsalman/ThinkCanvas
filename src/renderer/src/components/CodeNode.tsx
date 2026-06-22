@@ -141,7 +141,8 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
           options={{
             minimap: { enabled: false },
             fontSize: 12,
-            lineNumbers: 'off',
+            lineNumbers: 'on',
+            lineNumbersMinChars: 2,
             folding: false,
             scrollBeyondLastLine: false,
             automaticLayout: true,
