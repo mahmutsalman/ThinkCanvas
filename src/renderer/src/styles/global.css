@@ -11,6 +11,21 @@
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
 }
 
+/* Alternate theme by @fligma — deep crimson with a gold accent. Selected via a
+   data-theme attribute on <html>; only the color variables change, so every
+   component re-skins automatically. Add more themes by copying this block. */
+[data-theme='crimson'] {
+  --bg: #190001;
+  --bg-elev: #23090b;
+  --bg-elev-2: #330b07;
+  --border: #000000;
+  --border-strong: #000000;
+  --text: #e6e8ee;
+  --text-dim: #9aa0ad;
+  --accent: #cc9900;
+  --accent-soft: rgba(204, 153, 0, 0.18);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -109,6 +124,23 @@ body,
   height: 18px;
   background: var(--border);
   margin: 0 2px;
+}
+
+.tc-topbar__theme {
+  -webkit-app-region: no-drag;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 4px 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.tc-topbar__theme:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* Interactive controls must opt out of the drag region or they won't click. */
@@ -615,7 +647,7 @@ body,
   text-transform: uppercase;
   letter-spacing: 0.3px;
   color: var(--accent);
-  background: rgba(233, 136, 58, 0.12);
+  background: var(--accent-soft);
   border-radius: 4px;
   padding: 1px 5px;
 }
@@ -1081,7 +1113,7 @@ body,
   font-size: 9px;
   text-transform: uppercase;
   color: var(--accent);
-  background: rgba(233, 136, 58, 0.12);
+  background: var(--accent-soft);
   border-radius: 4px;
   padding: 1px 5px;
 }

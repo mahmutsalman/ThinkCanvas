@@ -48,6 +48,14 @@ const defaultEdgeOptions = { type: 'floating' as const }
 // Max code notes kept in the most-recently-used cycler (oldest auto-evicted).
 const MAX_MRU = 8
 
+// Selectable color themes (each just swaps the CSS color variables via the
+// [data-theme] attribute on <html>; see global.css). Extend this list to add more.
+const THEMES = [
+  { id: 'default', label: 'Midnight' },
+  { id: 'crimson', label: 'Crimson (by fligma)' }
+] as const
+const THEME_KEY = 'thinkcanvas:theme'
+
 const newId = (): string =>
   typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `n_${Date.now()}_${Math.round(Math.random() * 1e6)}`
 
@@ -124,6 +132,12 @@ function Flow(): JSX.Element {
       return next
     })
   }, [])
+  // Color theme (global UI pref): applied via [data-theme] on <html>.
+  const [theme, setTheme] = useState<string>(() => localStorage.getItem(THEME_KEY) || 'default')
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem(THEME_KEY, theme)
+  }, [theme])
   // When a search result lives on another board, remember which note to center
   // once that board's nodes have hydrated.
   const pendingFocus = useRef<string | null>(null)
@@ -617,6 +631,18 @@ function Flow(): JSX.Element {
           />
         </div>
         <div className="tc-topbar__right">
+          <select
+            className="tc-topbar__theme"
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+            title="Color theme"
+          >
+            {THEMES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
           <button onClick={() => setSearchOpen((v) => !v)} title="Search snippets (⌘F)">
             Search
           </button>
