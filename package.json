@@ -8,7 +8,8 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "build:mac": "electron-vite build && electron-builder --mac --arm64"
+    "build:mac": "electron-vite build && electron-builder --mac --arm64",
+    "postinstall": "electron-builder install-app-deps"
   },
   "build": {
     "appId": "com.mahmutsalman.thinkcanvas",
@@ -17,6 +18,11 @@
       "buildResources": "resources",
       "output": "dist"
     },
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/*.node"
+    ],
     "files": [
       "out/**/*"
     ],
@@ -27,7 +33,9 @@
       "target": [
         {
           "target": "dir",
-          "arch": ["arm64"]
+          "arch": [
+            "arm64"
+          ]
         }
       ]
     }
@@ -35,11 +43,14 @@
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
     "@xyflow/react": "^12.3.5",
+    "better-sqlite3": "^12.11.1",
     "monaco-editor": "^0.52.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.14.8",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
