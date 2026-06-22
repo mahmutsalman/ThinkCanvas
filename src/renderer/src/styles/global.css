@@ -663,6 +663,22 @@ body,
   padding: 1px 9px;
 }
 
+.tc-library__sort {
+  margin-left: 6px;
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.tc-library__sort:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .tc-library__spacer {
   flex: 1 1 auto;
 }

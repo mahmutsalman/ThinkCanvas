@@ -21,7 +21,7 @@ import '@xyflow/react/dist/style.css'
 import TextNode from './components/TextNode'
 import CodeNode from './components/CodeNode'
 import FloatingEdge from './components/FloatingEdge'
-import Library from './components/Library'
+import Library, { type BoardSort } from './components/Library'
 import SearchPanel from './components/SearchPanel'
 import { getEditor } from './lib/codeEditors'
 import {
@@ -36,6 +36,7 @@ import {
 const LEGACY_KEY = 'thinkcanvas:board:v1'
 const LAST_BOARD_KEY = 'thinkcanvas:lastBoard'
 const MRU_COLLAPSED_KEY = 'thinkcanvas:mruCollapsed'
+const BOARD_SORT_KEY = 'thinkcanvas:boardSort'
 
 // Defined outside the component so the references stay stable across renders
 // (React Flow warns and re-mounts nodes otherwise).
@@ -108,6 +109,17 @@ function Flow(): JSX.Element {
     setMruCollapsed((v) => {
       const next = !v
       localStorage.setItem(MRU_COLLAPSED_KEY, next ? '1' : '0')
+      return next
+    })
+  }, [])
+  // Library sort order (global UI pref): 'updated' (recent first) or 'created'.
+  const [boardSort, setBoardSort] = useState<BoardSort>(
+    () => (localStorage.getItem(BOARD_SORT_KEY) === 'created' ? 'created' : 'updated')
+  )
+  const toggleBoardSort = useCallback(() => {
+    setBoardSort((m) => {
+      const next: BoardSort = m === 'created' ? 'updated' : 'created'
+      localStorage.setItem(BOARD_SORT_KEY, next)
       return next
     })
   }, [])
@@ -692,6 +704,8 @@ function Flow(): JSX.Element {
         <Library
           boards={boardList}
           currentId={boardId}
+          sortMode={boardSort}
+          onToggleSort={toggleBoardSort}
           onOpen={switchBoard}
           onNew={createBoard}
           onDelete={deleteBoard}
