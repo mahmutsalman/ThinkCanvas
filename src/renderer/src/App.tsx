@@ -21,6 +21,7 @@ import '@xyflow/react/dist/style.css'
 import TextNode from './components/TextNode'
 import CodeNode from './components/CodeNode'
 import FloatingEdge from './components/FloatingEdge'
+import { getEditor } from './lib/codeEditors'
 
 const STORAGE_KEY = 'thinkcanvas:board:v1'
 
@@ -29,6 +30,9 @@ const STORAGE_KEY = 'thinkcanvas:board:v1'
 const nodeTypes = { text: TextNode, code: CodeNode }
 const edgeTypes = { floating: FloatingEdge }
 const defaultEdgeOptions = { type: 'floating' as const }
+
+// Max code notes kept in the most-recently-used cycler (oldest auto-evicted).
+const MAX_MRU = 8
 
 type Board = { nodes: Node[]; edges: Edge[] }
 
@@ -62,6 +66,13 @@ function Flow(): JSX.Element {
   const nodesRef = useRef(nodes)
   nodesRef.current = nodes
   const [menu, setMenu] = useState<{ x: number; y: number; edgeId: string } | null>(null)
+  // MRU cycler state: code-note ids (most-recent first) + a wrapping cursor.
+  const [mru, setMru] = useState<string[]>([])
+  const [cursor, setCursor] = useState(-1)
+  const mruRef = useRef(mru)
+  mruRef.current = mru
+  const cursorRef = useRef(cursor)
+  cursorRef.current = cursor
   const { screenToFlowPosition, getIntersectingNodes, setCenter, getZoom } = useReactFlow()
 
   // --- persistence: debounced autosave -------------------------------------
@@ -122,6 +133,73 @@ function Flow(): JSX.Element {
     window.addEventListener('mousedown', close)
     return () => window.removeEventListener('mousedown', close)
   }, [menu])
+
+  // --- MRU code-note cycler ------------------------------------------------
+  // Select a code note and glide the camera so it's centered.
+  const focusCodeNote = useCallback(
+    (nodeId: string) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId)
+      if (!node) return
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === nodeId })))
+      const w = node.measured?.width ?? (typeof node.width === 'number' ? node.width : 240)
+      const h = node.measured?.height ?? (typeof node.height === 'number' ? node.height : 200)
+      setCenter(node.position.x + w / 2, node.position.y + h / 2, { zoom: getZoom(), duration: 450 })
+    },
+    [setNodes, setCenter, getZoom]
+  )
+
+  // Drop ids from the cycler once their notes are deleted or converted to text.
+  useEffect(() => {
+    setMru((prev) => {
+      const filtered = prev.filter((id) => nodes.some((n) => n.id === id && n.type === 'code'))
+      return filtered.length === prev.length ? prev : filtered
+    })
+  }, [nodes])
+
+  // `.` cycles to the next (older) code note; Shift+. cycles back. Wraps around.
+  // Enter dives into the currently selected code note's editor, landing on the
+  // cursor position it had last (Monaco keeps it; restored from data on reload).
+  // Both are skipped while typing (Monaco focuses a <textarea>, so editing `.`
+  // and newlines are safe) or while an edge is selected.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const active = document.activeElement
+      const typing = !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
+
+      if (e.key === '.') {
+        if (typing || e.metaKey || e.ctrlKey || e.altKey) return
+        if (edgesRef.current.some((ed) => ed.selected)) return
+        const list = mruRef.current
+        if (list.length === 0) return
+        e.preventDefault()
+        const len = list.length
+        const next = e.shiftKey
+          ? (cursorRef.current - 1 + len) % len
+          : (cursorRef.current + 1) % len
+        setCursor(next)
+        focusCodeNote(list[next])
+      } else if (e.key === 'Enter') {
+        if (typing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
+        const sel = nodesRef.current.find((n) => n.selected && n.type === 'code')
+        if (!sel) return
+        const ed = getEditor(sel.id)
+        if (!ed) return
+        e.preventDefault()
+        ed.focus() // Monaco restores the last cursor position on focus
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [focusCodeNote])
+
+  // Click a cycler chip → jump straight to that note.
+  const jumpToChip = useCallback(
+    (nodeId: string, index: number) => {
+      setCursor(index)
+      focusCodeNote(nodeId)
+    },
+    [focusCodeNote]
+  )
 
   // --- create notes --------------------------------------------------------
   const addTextNode = useCallback(
@@ -224,6 +302,11 @@ function Flow(): JSX.Element {
   // just focused (e.g. to edit it) doesn't keep jerking the camera.
   const onNodeClick: NodeMouseHandler = useCallback(
     (_, node) => {
+      // Auto-track code notes in the MRU cycler: move this one to the top.
+      if (node.type === 'code') {
+        setMru((prev) => [node.id, ...prev.filter((i) => i !== node.id)].slice(0, MAX_MRU))
+        setCursor(0)
+      }
       const current = nodesRef.current.find((n) => n.id === node.id)
       if (current?.selected) return
       const w = node.measured?.width ?? (typeof node.width === 'number' ? node.width : 160)
@@ -299,6 +382,36 @@ function Flow(): JSX.Element {
         >
           <Background variant={BackgroundVariant.Dots} gap={26} size={1.4} color="#2a2e37" />
           <Controls showInteractive={false} />
+
+          {mru.length > 0 && (
+            <Panel position="top-left">
+              <div className="tc-mru">
+                <div className="tc-mru__head">
+                  code notes <kbd>.</kbd>
+                </div>
+                {mru.map((id, i) => {
+                  const node = nodes.find((n) => n.id === id)
+                  const cd = (node?.data ?? {}) as { code?: string; language?: string }
+                  const firstLine =
+                    (cd.code ?? '')
+                      .split('\n')
+                      .map((s) => s.trim())
+                      .find(Boolean) || '(empty)'
+                  return (
+                    <button
+                      key={id}
+                      className={`tc-mru__chip ${i === cursor ? 'is-current' : ''}`}
+                      onClick={() => jumpToChip(id, i)}
+                      title={firstLine}
+                    >
+                      <span className="tc-mru__lang">{cd.language ?? 'code'}</span>
+                      <span className="tc-mru__text">{firstLine}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </Panel>
+          )}
 
           <Panel position="bottom-center">
             <div className="tc-status">{textCount} {textCount === 1 ? 'note' : 'notes'}</div>

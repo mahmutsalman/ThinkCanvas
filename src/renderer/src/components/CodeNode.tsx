@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import Editor from '@monaco-editor/react'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import {
   Handle,
   Position,
@@ -8,13 +8,17 @@ import {
   type NodeProps,
   type Node
 } from '@xyflow/react'
+import { registerEditor, unregisterEditor } from '../lib/codeEditors'
 
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 2.5
 
+export type CursorPos = { lineNumber: number; column: number }
+
 export type CodeNodeData = {
   code: string
   language: string
+  cursor?: CursorPos
 }
 
 export type CodeNodeType = Node<CodeNodeData, 'code'>
@@ -55,6 +59,30 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
     el.addEventListener('wheel', onWheel, { capture: true, passive: false })
     return () => el.removeEventListener('wheel', onWheel, { capture: true })
   }, [getViewport, setViewport])
+
+  // Register this editor so Enter-to-focus can reach it; restore the saved
+  // cursor position on mount (survives reloads); save it again whenever the
+  // editor loses focus.
+  const handleMount: OnMount = (ed, monaco) => {
+    registerEditor(id, ed)
+    const saved = data.cursor
+    if (saved) {
+      ed.setPosition(saved)
+      ed.revealPositionInCenterIfOutsideViewport(saved)
+    }
+    ed.onDidBlurEditorText(() => {
+      const p = ed.getPosition()
+      if (p) updateNodeData(id, { cursor: { lineNumber: p.lineNumber, column: p.column } })
+    })
+    // Esc exits focus mode: blur the editor (which saves the cursor via the
+    // blur handler above) so the canvas keys (. to cycle, Enter to dive back
+    // in) take over again.
+    ed.addCommand(monaco.KeyCode.Escape, () => {
+      ;(document.activeElement as HTMLElement | null)?.blur()
+    })
+  }
+
+  useEffect(() => () => unregisterEditor(id), [id])
 
   const remove = (): void => {
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id))
@@ -108,6 +136,7 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
           language={data.language}
           value={data.code}
           theme="vs-dark"
+          onMount={handleMount}
           onChange={(value) => updateNodeData(id, { code: value ?? '' })}
           options={{
             minimap: { enabled: false },
