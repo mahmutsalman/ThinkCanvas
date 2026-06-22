@@ -12,6 +12,12 @@ import {
   type SyncBoard
 } from './db'
 
+// Pin the app name so dev and the packaged build share ONE userData folder
+// (otherwise dev uses package.json "name" = "thinkcanvas" while the packaged
+// app uses productName "ThinkCanvas", giving two separate board stores).
+// Must run before any app.getPath('userData') call.
+app.setName('ThinkCanvas')
+
 // --- Board file storage --------------------------------------------------
 // Each board is one JSON file under <userData>/boards/<id>.json. No size
 // limits, survives crashes/reloads, and the folder can be opened/backed up.
