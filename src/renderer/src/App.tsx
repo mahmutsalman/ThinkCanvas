@@ -109,6 +109,11 @@ function Flow(): JSX.Element {
   // to route Enter, independently of React Flow selection or focus, so a stale
   // editor focus can't misdirect it.
   const activeCodeId = useRef<string | null>(null)
+  // Zoom level pinned for the current `.`-cycling run. Sampled once when cycling
+  // starts and reused for every subsequent focus, so the camera doesn't drift
+  // out as fast presses interrupt the in-flight setCenter animation. Cleared
+  // (→ null) on any user-initiated zoom/pan so a deliberate zoom is honored next.
+  const navZoomRef = useRef<number | null>(null)
   // Board (multi-document) state.
   const [boardId, setBoardId] = useState<string | null>(null)
   const [boardName, setBoardName] = useState('Untitled')
@@ -396,7 +401,11 @@ function Flow(): JSX.Element {
       setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === nodeId })))
       const w = node.measured?.width ?? (typeof node.width === 'number' ? node.width : 240)
       const h = node.measured?.height ?? (typeof node.height === 'number' ? node.height : 200)
-      setCenter(node.position.x + w / 2, node.position.y + h / 2, { zoom: getZoom(), duration: 450 })
+      // Pin the zoom for the cycling run (sample once, then reuse) so repeated
+      // `.` presses don't drift the camera outward via interrupted animations.
+      const z = navZoomRef.current ?? getZoom()
+      navZoomRef.current = z
+      setCenter(node.position.x + w / 2, node.position.y + h / 2, { zoom: z, duration: 450 })
     },
     [setNodes, setCenter, getZoom]
   )
@@ -740,6 +749,11 @@ function Flow(): JSX.Element {
           onEdgeDoubleClick={onEdgeDoubleClick}
           onEdgeContextMenu={onEdgeContextMenu}
           onPaneClick={onPaneClick}
+          onMoveEnd={(e) => {
+            // Only user gestures pass a non-null event (programmatic setCenter
+            // passes null). Re-sample the cycling zoom on the next `.` press.
+            if (e) navZoomRef.current = null
+          }}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           defaultEdgeOptions={defaultEdgeOptions}
