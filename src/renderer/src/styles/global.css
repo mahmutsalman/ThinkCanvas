@@ -1175,6 +1175,45 @@ body,
   border-color: var(--accent);
 }
 
+/* Lit up while we're sitting at the origin (after ←). */
+.tc-search__back.is-active {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Banner shown while parked at the search origin. */
+.tc-search__origin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  animation: tc-recall-fade 160ms ease;
+}
+
+.tc-search__origin kbd {
+  font-size: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+.tc-search__origin-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  flex: none;
+}
+
 .tc-search__close {
   background: transparent;
   border: 1px solid var(--border);

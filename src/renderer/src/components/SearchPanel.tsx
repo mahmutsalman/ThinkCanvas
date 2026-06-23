@@ -63,6 +63,7 @@ export default function SearchPanel({
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
   const [sel, setSel] = useState(-1) // keyboard-highlighted result
+  const [atOrigin, setAtOrigin] = useState(false) // true after ← (back at start)
   const [tagSort, setTagSort] = useState<'used' | 'recent'>(() =>
     localStorage.getItem('thinkcanvas:tagSort') === 'recent' ? 'recent' : 'used'
   )
@@ -103,6 +104,7 @@ export default function SearchPanel({
       setResults(r)
       setSearched(true)
       setSel(-1) // nothing selected yet; first ↓ opens the top match
+      setAtOrigin(false)
     }, 220)
     return () => clearTimeout(t)
   }, [query, mode])
@@ -132,6 +134,7 @@ export default function SearchPanel({
   // cycling results instead of the canvas/note swallowing them.
   const openResult = (r: SearchResult): void => {
     lastOpenedRef.current = r
+    setAtOrigin(false) // we're now sitting on a result, not the origin
     onOpenSnippet(r.boardId, r.nodeId)
     inputRef.current?.focus()
   }
@@ -139,6 +142,7 @@ export default function SearchPanel({
   // ← returns to where search opened; → (re)jumps to the result you picked.
   const goBack = (): void => {
     onBack()
+    setAtOrigin(true)
     inputRef.current?.focus()
   }
   const goToResult = (): void => {
@@ -150,6 +154,7 @@ export default function SearchPanel({
   const runTagSearch = async (tag: string): Promise<void> => {
     setActiveTag(tag)
     setSel(-1)
+    setAtOrigin(false)
     const r = await window.snippets.search(tag, 'tag')
     setResults(r)
     setSearched(true)
@@ -163,6 +168,7 @@ export default function SearchPanel({
     setSearched(false)
     setSel(-1)
     setActiveTag(null)
+    setAtOrigin(false)
     inputRef.current?.focus()
   }
 
@@ -210,7 +216,7 @@ export default function SearchPanel({
         <span className="tc-search__hint">↑↓ pick · ← back · → go</span>
         <div className="tc-search__spacer" />
         <button
-          className="tc-search__back"
+          className={`tc-search__back ${atOrigin ? 'is-active' : ''}`}
           // Keep focus in the box so arrow keys keep working after going back.
           onMouseDown={(e) => e.preventDefault()}
           onClick={goBack}
@@ -299,6 +305,13 @@ export default function SearchPanel({
         </>
       )}
 
+      {atOrigin && (
+        <div className="tc-search__origin">
+          <span className="tc-search__origin-dot" />
+          Back at your starting point — press <kbd>→</kbd> to return to the result
+        </div>
+      )}
+
       <div className="tc-search__results">
         {searched && results.length === 0 && <div className="tc-search__empty">No matches.</div>}
         {results.map((r, i) => {
@@ -306,7 +319,7 @@ export default function SearchPanel({
           const onThisBoard = r.boardId === currentBoardId
           return (
             <div
-              className={`tc-search__result ${i === sel ? 'is-selected' : ''}`}
+              className={`tc-search__result ${i === sel && !atOrigin ? 'is-selected' : ''}`}
               key={`${r.boardId}:${r.nodeId}`}
               ref={i === sel ? selRef : undefined}
               // Prevent the mousedown from moving focus off the search box; the
