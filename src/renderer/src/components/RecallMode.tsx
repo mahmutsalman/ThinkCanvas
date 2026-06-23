@@ -66,6 +66,32 @@ function fmtTime(ms: number): string {
   return `${mm}:${ss.toString().padStart(2, '0')}`
 }
 
+// Strip comments so Recall Mode tests ONLY the code: block comments, full-line
+// comments, and trailing line comments are removed, and resulting blank lines
+// are dropped. Naive (doesn't parse strings), which is fine for study snippets —
+// the `://` guard keeps URLs in strings from being mangled in the common case.
+function lineCommentToken(language: string): string {
+  if (language === 'python') return '#'
+  if (language === 'sql') return '--'
+  return '//' // java, c, cpp, javascript, typescript, rust, go, json, …
+}
+
+function stripComments(code: string, language: string): string {
+  // Block comments /* … */ (C-family).
+  let src = code
+  if (language !== 'python' && language !== 'sql') {
+    src = src.replace(/\/\*[\s\S]*?\*\//g, '')
+  }
+  const token = lineCommentToken(language)
+  const trailing =
+    token === '//' ? /(?<!:)\/\/.*$/ : token === '#' ? /#.*$/ : /--.*$/
+  return src
+    .split('\n')
+    .map((line) => line.replace(trailing, '').replace(/\s+$/, ''))
+    .filter((line) => line.trim().length > 0)
+    .join('\n')
+}
+
 type Score = { acc: number; ms: number; stars: number; streak: number }
 
 type Props = {
@@ -75,8 +101,9 @@ type Props = {
 }
 
 export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.Element {
-  const original = node.data.code ?? ''
   const language = node.data.language ?? 'plaintext'
+  // The recall target is the code WITHOUT comments — you memorize code, not prose.
+  const original = stripComments(node.data.code ?? '', language)
   const title = node.data.title?.trim() || node.data.language || 'snippet'
   const prev = node.data.recall
 
@@ -126,6 +153,10 @@ export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.E
   const handleMount: OnMount = (ed, monaco) => {
     editorRef.current = ed
     monacoRef.current = monaco
+    // Monaco keeps models alive globally by path; on a remount the model may
+    // still hold stale text, so seed it from the persisted attempt explicitly.
+    const seed = prev?.attempt ?? ''
+    if (ed.getValue() !== seed) ed.setValue(seed)
     decoRef.current = ed.createDecorationsCollection([])
     ed.focus()
     applyDiff(ed.getValue())
@@ -246,6 +277,7 @@ export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.E
           {/* Type-from-memory editor (the only thing you interact with). */}
           <div className="tc-recall__attempt">
             <Editor
+              path={`recall-attempt-${node.id}`}
               language={language}
               defaultValue={prev?.attempt ?? ''}
               theme="vs-dark"
@@ -257,6 +289,7 @@ export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.E
           {/* Spotlit original — fades in only while Tab is held. */}
           <div className="tc-recall__peek" aria-hidden={!peeking}>
             <Editor
+              path={`recall-original-${node.id}`}
               language={language}
               value={original}
               theme="vs-dark"
