@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
-import { promises as fs } from 'fs'
+import { promises as fs, watch } from 'fs'
 import {
   openDatabase,
   closeDatabase,
@@ -97,6 +97,37 @@ function registerSnippetIpc(): void {
   ipcMain.handle('tags:list', () => listTags())
 }
 
+// Viewer !color theme bridge. The Twitch daemon writes <userData>/stream-color.json
+// (the same payload the VS Code ProjectCycle extension consumes). We watch it and
+// forward each change to the renderer, which maps the hex → a vscode-* theme and
+// applies it as a temporary override. No port/server — just a watched file.
+function setupStreamColorBridge(win: BrowserWindow): void {
+  const dir = app.getPath('userData')
+  const file = join(dir, 'stream-color.json')
+  const sendCurrent = async (): Promise<void> => {
+    try {
+      const data = JSON.parse(await fs.readFile(file, 'utf8'))
+      if (!win.isDestroyed()) win.webContents.send('stream-color:change', data)
+    } catch {
+      /* no file / unreadable / bad json — ignore */
+    }
+  }
+  // Apply any override already present once the renderer is ready to receive.
+  win.webContents.once('did-finish-load', () => void sendCurrent())
+  // The daemon writes via tmp + rename, so watch the DIR and filter the filename.
+  try {
+    let debounce: ReturnType<typeof setTimeout> | undefined
+    const watcher = watch(dir, (_event, filename) => {
+      if (filename && filename !== 'stream-color.json') return
+      if (debounce) clearTimeout(debounce)
+      debounce = setTimeout(() => void sendCurrent(), 150)
+    })
+    win.on('closed', () => watcher.close())
+  } catch (err) {
+    console.error('stream-color watcher failed to start', err)
+  }
+}
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -130,6 +161,8 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  setupStreamColorBridge(mainWindow)
 }
 
 // Single-instance lock: if another ThinkCanvas is already running, quit this

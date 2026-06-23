@@ -107,6 +107,227 @@
   --accent-soft: rgba(203, 166, 247, 0.18);
 }
 
+/* ---- VS Code palette themes (viewer !color command) ----
+   18 themes derived from the ProjectCycle palette; the VS Code color is
+   the --accent, the rest are tinted-dark layers. Generated, see
+   scratchpad/gen_themes.py. The 8 built-in themes above are untouched. */
+
+[data-theme='vscode-crimson'] {
+  --bg: #1d0f0f;
+  --bg-elev: #261515;
+  --bg-elev-2: #311c1c;
+  --border: #4c2c2c;
+  --border-strong: #643d3d;
+  --text: #f0eaea;
+  --text-dim: #b69a9a;
+  --accent: #ff1f1f;
+  --accent-soft: rgba(255, 31, 31, 0.18);
+}
+
+[data-theme='vscode-ember'] {
+  --bg: #1d160f;
+  --bg-elev: #261d15;
+  --bg-elev-2: #31261c;
+  --border: #4c3c2c;
+  --border-strong: #64503d;
+  --text: #f0edea;
+  --text-dim: #b6a89a;
+  --accent: #ff8c1a;
+  --accent-soft: rgba(255, 140, 26, 0.18);
+}
+
+[data-theme='vscode-amber'] {
+  --bg: #1d190f;
+  --bg-elev: #262215;
+  --bg-elev-2: #312c1c;
+  --border: #4c442c;
+  --border-strong: #645a3d;
+  --text: #f0efea;
+  --text-dim: #b6af9a;
+  --accent: #ffc61a;
+  --accent-soft: rgba(255, 198, 26, 0.18);
+}
+
+[data-theme='vscode-citron'] {
+  --bg: #1c1d0f;
+  --bg-elev: #262615;
+  --bg-elev-2: #30311c;
+  --border: #4b4c2c;
+  --border-strong: #62643d;
+  --text: #f0f0ea;
+  --text-dim: #b5b69a;
+  --accent: #f2f91f;
+  --accent-soft: rgba(242, 249, 31, 0.18);
+}
+
+[data-theme='vscode-lime-volt'] {
+  --bg: #181d0f;
+  --bg-elev: #202615;
+  --bg-elev-2: #2a311c;
+  --border: #414c2c;
+  --border-strong: #57643d;
+  --text: #eef0ea;
+  --text-dim: #adb69a;
+  --accent: #aaff00;
+  --accent-soft: rgba(170, 255, 0, 0.18);
+}
+
+[data-theme='vscode-toxic-lime'] {
+  --bg: #111d0f;
+  --bg-elev: #172615;
+  --bg-elev-2: #1f311c;
+  --border: #324c2c;
+  --border-strong: #44643d;
+  --text: #ebf0ea;
+  --text-dim: #9fb69a;
+  --accent: #37f910;
+  --accent-soft: rgba(55, 249, 16, 0.18);
+}
+
+[data-theme='vscode-emerald'] {
+  --bg: #0f1d16;
+  --bg-elev: #15261d;
+  --bg-elev-2: #1c3126;
+  --border: #2c4c3c;
+  --border-strong: #3d6450;
+  --text: #eaf0ed;
+  --text-dim: #9ab6a8;
+  --accent: #00ff80;
+  --accent-soft: rgba(0, 255, 128, 0.18);
+}
+
+[data-theme='vscode-aurora-green'] {
+  --bg: #0f1d16;
+  --bg-elev: #15261e;
+  --bg-elev-2: #1c3127;
+  --border: #2c4c3c;
+  --border-strong: #3d6451;
+  --text: #eaf0ed;
+  --text-dim: #9ab6a9;
+  --accent: #00e676;
+  --accent-soft: rgba(0, 230, 118, 0.18);
+}
+
+[data-theme='vscode-aqua'] {
+  --bg: #0f1d1d;
+  --bg-elev: #152626;
+  --bg-elev-2: #1c3131;
+  --border: #2c4c4c;
+  --border-strong: #3d6464;
+  --text: #eaf0f0;
+  --text-dim: #9ab6b6;
+  --accent: #00f5f5;
+  --accent-soft: rgba(0, 245, 245, 0.18);
+}
+
+[data-theme='vscode-electric-blue'] {
+  --bg: #0f191d;
+  --bg-elev: #152126;
+  --bg-elev-2: #1c2b31;
+  --border: #2c424c;
+  --border-strong: #3d5864;
+  --text: #eaeef0;
+  --text-dim: #9aaeb6;
+  --accent: #00b4ff;
+  --accent-soft: rgba(0, 180, 255, 0.18);
+}
+
+[data-theme='vscode-sky-spark'] {
+  --bg: #0f191d;
+  --bg-elev: #152126;
+  --bg-elev-2: #1c2b31;
+  --border: #2c434c;
+  --border-strong: #3d5964;
+  --text: #eaeff0;
+  --text-dim: #9aafb6;
+  --accent: #38c8ff;
+  --accent-soft: rgba(56, 200, 255, 0.18);
+}
+
+[data-theme='vscode-azure'] {
+  --bg: #0f171d;
+  --bg-elev: #151f26;
+  --bg-elev-2: #1c2831;
+  --border: #2c3f4c;
+  --border-strong: #3d5464;
+  --text: #eaeef0;
+  --text-dim: #9aabb6;
+  --accent: #1fa2ff;
+  --accent-soft: rgba(31, 162, 255, 0.18);
+}
+
+[data-theme='vscode-cobalt'] {
+  --bg: #0f121d;
+  --bg-elev: #151926;
+  --bg-elev-2: #1c2131;
+  --border: #2c344c;
+  --border-strong: #3d4764;
+  --text: #eaecf0;
+  --text-dim: #9aa1b6;
+  --accent: #3d6eff;
+  --accent-soft: rgba(61, 110, 255, 0.18);
+}
+
+[data-theme='vscode-indigo'] {
+  --bg: #100f1d;
+  --bg-elev: #161526;
+  --bg-elev-2: #1d1c31;
+  --border: #2f2c4c;
+  --border-strong: #403d64;
+  --text: #eaeaf0;
+  --text-dim: #9d9ab6;
+  --accent: #2916f3;
+  --accent-soft: rgba(41, 22, 243, 0.18);
+}
+
+[data-theme='vscode-violet'] {
+  --bg: #150f1d;
+  --bg-elev: #1c1526;
+  --bg-elev-2: #251c31;
+  --border: #392c4c;
+  --border-strong: #4d3d64;
+  --text: #edeaf0;
+  --text-dim: #a69ab6;
+  --accent: #9447ff;
+  --accent-soft: rgba(148, 71, 255, 0.18);
+}
+
+[data-theme='vscode-magenta'] {
+  --bg: #1d0f1d;
+  --bg-elev: #261526;
+  --bg-elev-2: #311c31;
+  --border: #4c2c4c;
+  --border-strong: #643d64;
+  --text: #f0eaf0;
+  --text-dim: #b69ab6;
+  --accent: #ff33ff;
+  --accent-soft: rgba(255, 51, 255, 0.18);
+}
+
+[data-theme='vscode-plasma-magenta'] {
+  --bg: #1b0f1d;
+  --bg-elev: #241526;
+  --bg-elev-2: #2e1c31;
+  --border: #472c4c;
+  --border-strong: #5e3d64;
+  --text: #efeaf0;
+  --text-dim: #b29ab6;
+  --accent: #e040fb;
+  --accent-soft: rgba(224, 64, 251, 0.18);
+}
+
+[data-theme='vscode-hot-pink'] {
+  --bg: #1d0f14;
+  --bg-elev: #26151b;
+  --bg-elev-2: #311c23;
+  --border: #4c2c37;
+  --border-strong: #643d4b;
+  --text: #f0eaec;
+  --text-dim: #b69aa4;
+  --accent: #ff2d78;
+  --accent-soft: rgba(255, 45, 120, 0.18);
+}
+
 * {
   box-sizing: border-box;
 }

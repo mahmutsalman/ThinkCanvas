@@ -19,3 +19,14 @@ contextBridge.exposeInMainWorld('snippets', {
     ipcRenderer.invoke('snippets:search', query, mode),
   listTags: () => ipcRenderer.invoke('tags:list')
 })
+
+// Viewer !color theme bridge. The main process watches stream-color.json (written
+// by the Twitch daemon) and emits 'stream-color:change'. Renderer subscribes here.
+contextBridge.exposeInMainWorld('streamColor', {
+  onChange: (cb: (data: { hex?: string; name?: string; reset?: boolean }) => void) => {
+    const listener = (_e: unknown, data: unknown): void =>
+      cb(data as { hex?: string; name?: string; reset?: boolean })
+    ipcRenderer.on('stream-color:change', listener)
+    return () => ipcRenderer.removeListener('stream-color:change', listener)
+  }
+})

@@ -52,6 +52,53 @@ export const BUILTIN_THEMES = [
   { id: 'catppuccin', label: 'Catppuccin Mocha' }
 ] as const
 
+// VS Code palette themes (added for the viewer !color chat command). Their
+// colors live in global.css as [data-theme='vscode-*'] blocks, same as the
+// built-ins. Kept SEPARATE from BUILTIN_THEMES so the originals are untouched.
+export const VSCODE_THEMES = [
+  { id: 'vscode-crimson', label: 'Crimson' },
+  { id: 'vscode-ember', label: 'Ember' },
+  { id: 'vscode-amber', label: 'Amber' },
+  { id: 'vscode-citron', label: 'Citron' },
+  { id: 'vscode-lime-volt', label: 'Lime Volt' },
+  { id: 'vscode-toxic-lime', label: 'Toxic Lime' },
+  { id: 'vscode-emerald', label: 'Emerald' },
+  { id: 'vscode-aurora-green', label: 'Aurora Green' },
+  { id: 'vscode-aqua', label: 'Aqua' },
+  { id: 'vscode-electric-blue', label: 'Electric Blue' },
+  { id: 'vscode-sky-spark', label: 'Sky Spark' },
+  { id: 'vscode-azure', label: 'Azure' },
+  { id: 'vscode-cobalt', label: 'Cobalt' },
+  { id: 'vscode-indigo', label: 'Indigo' },
+  { id: 'vscode-violet', label: 'Violet' },
+  { id: 'vscode-magenta', label: 'Magenta' },
+  { id: 'vscode-plasma-magenta', label: 'Plasma Magenta' },
+  { id: 'vscode-hot-pink', label: 'Hot Pink' }
+] as const
+
+// Maps an incoming !color hex (lowercased) -> the matching vscode-* theme id,
+// so the stream-color bridge can switch theme by the color the viewer picked.
+export const VSCODE_THEME_BY_HEX: Record<string, string> = {
+  '#ff1f1f': 'vscode-crimson',
+  '#ff8c1a': 'vscode-ember',
+  '#ffc61a': 'vscode-amber',
+  '#f2f91f': 'vscode-citron',
+  '#aaff00': 'vscode-lime-volt',
+  '#37f910': 'vscode-toxic-lime',
+  '#00ff80': 'vscode-emerald',
+  '#00e676': 'vscode-aurora-green',
+  '#00f5f5': 'vscode-aqua',
+  '#00b4ff': 'vscode-electric-blue',
+  '#38c8ff': 'vscode-sky-spark',
+  '#1fa2ff': 'vscode-azure',
+  '#3d6eff': 'vscode-cobalt',
+  '#2916f3': 'vscode-indigo',
+  '#9447ff': 'vscode-violet',
+  '#ff33ff': 'vscode-magenta',
+  '#e040fb': 'vscode-plasma-magenta',
+  '#ff2d78': 'vscode-hot-pink'
+}
+
 const CUSTOM_KEY = 'thinkcanvas:customThemes'
 
 export function loadCustomThemes(): CustomTheme[] {

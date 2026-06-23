@@ -28,6 +28,8 @@ import SearchPanel from './components/SearchPanel'
 import ThemeEditor from './components/ThemeEditor'
 import {
   BUILTIN_THEMES,
+  VSCODE_THEMES,
+  VSCODE_THEME_BY_HEX,
   applyTheme,
   loadCustomThemes,
   saveCustomThemes,
@@ -152,16 +154,45 @@ function Flow(): JSX.Element {
   // Color theme + user-made custom themes.
   const [customThemes, setCustomThemes] = useState<CustomTheme[]>(() => loadCustomThemes())
   const [theme, setTheme] = useState<string>(() => localStorage.getItem(THEME_KEY) || 'default')
+  // Stream override — a Twitch viewer recolored via the !color chat command (the
+  // daemon writes stream-color.json; the Electron main process watches it and
+  // pushes here). TEMPORARY: it wins over `theme` for display but is NEVER
+  // persisted, so a reset / manual pick / app restart returns to the real theme.
+  const [streamOverride, setStreamOverride] = useState<string | null>(null)
   const [themeEditor, setThemeEditor] = useState<{
     mode: 'create' | 'edit'
     editingId: string | null
   } | null>(null)
 
   // Apply the active theme to <html> (built-in → data-theme; custom → inline vars).
+  // The stream override wins for display; only the real pick is persisted.
   useEffect(() => {
-    applyTheme(theme, customThemes)
+    applyTheme(streamOverride ?? theme, customThemes)
     localStorage.setItem(THEME_KEY, theme)
-  }, [theme, customThemes])
+  }, [theme, customThemes, streamOverride])
+
+  // Listen for viewer !color theme switches from the Electron main process.
+  useEffect(() => {
+    const sc = window.streamColor
+    if (!sc?.onChange) return
+    let idleTimer: ReturnType<typeof setTimeout> | undefined
+    const off = sc.onChange((data) => {
+      if (idleTimer) clearTimeout(idleTimer)
+      if (!data || data.reset || typeof data.hex !== 'string') {
+        setStreamOverride(null)
+        return
+      }
+      const id = VSCODE_THEME_BY_HEX[data.hex.toLowerCase()]
+      if (!id) return // unknown color — leave the current theme as-is
+      setStreamOverride(id)
+      // Auto-revert after 15 min of no new !color, so it always returns to normal.
+      idleTimer = setTimeout(() => setStreamOverride(null), 15 * 60_000)
+    })
+    return () => {
+      if (idleTimer) clearTimeout(idleTimer)
+      off?.()
+    }
+  }, [])
 
   const currentIsCustom = customThemes.some((t) => t.id === theme)
 
@@ -170,6 +201,7 @@ function Flow(): JSX.Element {
       setThemeEditor({ mode: 'create', editingId: null })
       return
     }
+    setStreamOverride(null) // a manual pick takes over from any viewer override
     setTheme(value)
   }, [])
 
@@ -728,6 +760,13 @@ function Flow(): JSX.Element {
                 {t.label}
               </option>
             ))}
+            <optgroup label="VS Code (viewer colors)">
+              {VSCODE_THEMES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </optgroup>
             {customThemes.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.label}
