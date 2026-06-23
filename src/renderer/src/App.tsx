@@ -123,6 +123,10 @@ function Flow(): JSX.Element {
   const [searchOpen, setSearchOpen] = useState(false)
   // The code note currently open in Recall Mode (Space on a focused code note).
   const [recallId, setRecallId] = useState<string | null>(null)
+  // Mirror so the global canvas key handlers can stay inert while Recall Mode
+  // (a modal) owns the keyboard — otherwise Enter/`.`/Space leak into the canvas.
+  const recallActiveRef = useRef(false)
+  recallActiveRef.current = recallId !== null
   // Collapse state of the left-side code-note cycler (global UI pref).
   const [mruCollapsed, setMruCollapsed] = useState<boolean>(
     () => localStorage.getItem(MRU_COLLAPSED_KEY) === '1'
@@ -365,6 +369,7 @@ function Flow(): JSX.Element {
   // Type while exactly one edge is selected → start labelling it with that key.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      if (recallActiveRef.current) return
       const active = document.activeElement
       if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return
       if (e.metaKey || e.ctrlKey || e.altKey || e.key.length !== 1) return
@@ -481,6 +486,8 @@ function Flow(): JSX.Element {
   // and newlines are safe) or while an edge is selected.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      // Recall Mode is a modal — it owns the keyboard while open.
+      if (recallActiveRef.current) return
       const active = document.activeElement
       const typing = !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')
 
@@ -532,6 +539,7 @@ function Flow(): JSX.Element {
   // Cmd/Ctrl+F toggles the search panel (works even from inside a code editor).
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      if (recallActiveRef.current) return
       if ((e.metaKey || e.ctrlKey) && (e.key === 'f' || e.key === 'F')) {
         e.preventDefault()
         setSearchOpen((v) => !v)
