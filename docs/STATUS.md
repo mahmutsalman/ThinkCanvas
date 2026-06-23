@@ -1,28 +1,28 @@
 # Status — ThinkCanvas
 
-**Last updated**: 2026-06-22 20:20
+**Last updated**: 2026-06-23 11:24
 **Current phase**: Phase 3 — Theming & collaboration
-**Current slice**: Slice 10 — Theme system (switcher, in-app maker, 8 themes) (done; in dev)
+**Current slice**: Slice 11 — Recall Mode (memorization) + dot-cycle zoom-drift fix (done; in dev)
 
 ---
 
 ## Last Completed Task
-Built a full theme system: a top-bar theme switcher, an in-app theme maker ("New theme…" editor with whole-app live preview, custom themes persisted + edit/delete), and 8 built-in palettes (Midnight, Crimson by fligma, Nord, Dracula, Solarized Dark, Tokyo Night, Gruvbox, Catppuccin Mocha). Also added a Back button to search (returns to camera/board where search opened).
+Shipped Recall Mode: Space on a focused code note opens a cinematic full-screen overlay (board dims) with a blank, independent Monaco editor to retype the snippet from memory. Hold Tab to peek at the original (fades in), live typing-test diff coloring (green/red), and a Done/⌘↵ score card (accuracy %, time, stars, streak). Stats persist per note in the board JSON (`data.recall`). Comments are stripped so only code is tested. Also fixed the `.`-cycle zoom drift (camera no longer creeps out over many presses).
 
 ## Next Concrete Action
-Keep iterating in dev (HMR). When ready to ship: `npm run build:mac` → reinstall to /Applications → delete `dist/` (avoids the duplicate dock icon). Optional: theme import/export, a light theme.
+Build search-result keyboard navigation: in the search panel, **Right arrow** = "Go to" the focused result (navigate to it), **Left arrow** = Back (return to where search opened). Replaces having to click the buttons. See `components/SearchPanel.tsx` + the `onOpenSnippet`/`goBackToOrigin` wiring in `App.tsx`.
 
 ## Active Blockers
 - none
 
 ## Open Questions
-- Add a light theme (token model is dark-first: dark bg + light text)?
-- Theme import/export as JSON so themes can be shared (e.g. with fligma)?
+- Recall: should the peek view still show comments as context-hints (currently stripped everywhere)?
+- Comment-stripping is naive (doesn't parse strings) — revisit if a `//`/`#` inside a string gets over-trimmed.
 - Cross-board search arrow-land switches boards each time — keep instant or gate behind Enter?
 
 ## Recent Decisions (last 5)
-- Themes = the 9 CSS color variables. Built-in themes are [data-theme] CSS blocks; custom themes apply as inline CSS variables on <html>. One token model, every component re-skins automatically.
-- In-app theme maker reuses the live document as its preview (setLiveToken on each pick) rather than a separate mock — inspired by fligma's Python tool (vetted safe: stdlib-only Tkinter, one user-chosen file write, no network/shell/exec).
-- 6 curated palettes mapped from renowned contrast-tested schemes (Nord/Dracula/Solarized/Tokyo Night/Gruvbox/Catppuccin).
-- Search "Back" snapshots board + viewport on open and restores it.
-- Created the `/thinkcanvas-db` command (in ~/.claude/commands) to build/explore the knowledge base — writes board JSON (source of truth), reads SQLite (derived index).
+- Recall Mode is a modal overlay (mirrors the `.tc-library` pattern); while open, the global canvas key handlers (`.`/Space/Enter, edge-label, ⌘F) bail via `recallActiveRef` so the modal owns the keyboard.
+- The two Recall editors need distinct Monaco `path` props — without them Monaco shares one text model and typing mutated the original (the "affects the original" bug).
+- Zoom-drift fix: pin the cycling zoom once (`navZoomRef`), reset only on user-initiated `onMoveEnd` — don't re-sample live zoom each `.` press.
+- `data.recall` rides along in node data (wholesale save/load, no migration); SQLite index untouched (only indexes code/language/title/tags).
+- Themes = the 9 CSS color variables; new overlays must use `var(--*)` to re-skin automatically.
