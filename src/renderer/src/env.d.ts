@@ -11,7 +11,12 @@ interface Window {
   // daemon writes stream-color.json. onChange returns an unsubscribe fn.
   streamColor?: {
     onChange: (
-      cb: (data: { hex?: string; name?: string; reset?: boolean }) => void
+      cb: (data: {
+        hex?: string
+        name?: string
+        reset?: boolean
+        durationMs?: number | null
+      }) => void
     ) => () => void
   }
 }

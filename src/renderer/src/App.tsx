@@ -29,8 +29,9 @@ import ThemeEditor from './components/ThemeEditor'
 import {
   BUILTIN_THEMES,
   VSCODE_THEMES,
-  VSCODE_THEME_BY_HEX,
   applyTheme,
+  applyDynamicTheme,
+  isHex6,
   loadCustomThemes,
   saveCustomThemes,
   newThemeId,
@@ -164,10 +165,12 @@ function Flow(): JSX.Element {
     editingId: string | null
   } | null>(null)
 
-  // Apply the active theme to <html> (built-in → data-theme; custom → inline vars).
-  // The stream override wins for display; only the real pick is persisted.
+  // Apply the active theme to <html>. A viewer override (any hex) derives a full
+  // theme dynamically as inline vars; otherwise built-in → data-theme / custom →
+  // inline vars. The override wins for display; only the real pick is persisted.
   useEffect(() => {
-    applyTheme(streamOverride ?? theme, customThemes)
+    if (streamOverride) applyDynamicTheme(streamOverride)
+    else applyTheme(theme, customThemes)
     localStorage.setItem(THEME_KEY, theme)
   }, [theme, customThemes, streamOverride])
 
@@ -182,11 +185,16 @@ function Flow(): JSX.Element {
         setStreamOverride(null)
         return
       }
-      const id = VSCODE_THEME_BY_HEX[data.hex.toLowerCase()]
-      if (!id) return // unknown color — leave the current theme as-is
-      setStreamOverride(id)
-      // Auto-revert after 15 min of no new !color, so it always returns to normal.
-      idleTimer = setTimeout(() => setStreamOverride(null), 15 * 60_000)
+      const hex = data.hex.toLowerCase()
+      if (!isHex6(hex)) return // not a valid #rrggbb — leave the theme as-is
+      setStreamOverride(hex) // derive a full 8-layer theme from ANY hex
+      // Honor the per-command time limit: a positive durationMs (capped 1h) auto-
+      // reverts; blank / absent = no limit (until reset / manual pick / restart).
+      const durationMs =
+        typeof data.durationMs === 'number' && data.durationMs > 0
+          ? Math.min(data.durationMs, 60 * 60_000)
+          : null
+      if (durationMs) idleTimer = setTimeout(() => setStreamOverride(null), durationMs)
     })
     return () => {
       if (idleTimer) clearTimeout(idleTimer)

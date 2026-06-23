@@ -171,3 +171,86 @@ export function readCurrentTokens(): ThemeTokens {
   }
   return out
 }
+
+// --- Dynamic theme derivation (viewer !color with an ARBITRARY hex) -----------
+// Build a full 8-layer dark theme from any accent hex: keep the accent's hue, use
+// fixed lightness/saturation per layer (mirrors scripts/gen_themes.py in the
+// ProjectTwitch repo — the generator that produced the 18 built-in vscode-*
+// themes, so named colors derive an identical look). The raw hex is ONLY ever the
+// accent — bg stays dark, text near-white — so any viewer color stays readable.
+type HSL = { h: number; s: number; l: number }
+
+function hexToHsl(hex: string): HSL {
+  const h2 = hex.replace('#', '')
+  const r = (parseInt(h2.slice(0, 2), 16) || 0) / 255
+  const g = (parseInt(h2.slice(2, 4), 16) || 0) / 255
+  const b = (parseInt(h2.slice(4, 6), 16) || 0) / 255
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  let h = 0
+  let s = 0
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0)
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    h /= 6
+  }
+  return { h, s, l }
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  let r: number
+  let g: number
+  let b: number
+  if (s === 0) {
+    r = g = b = l
+  } else {
+    const hue2rgb = (p: number, q: number, t: number): number => {
+      if (t < 0) t += 1
+      if (t > 1) t -= 1
+      if (t < 1 / 6) return p + (q - p) * 6 * t
+      if (t < 1 / 2) return q
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+      return p
+    }
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s
+    const p = 2 * l - q
+    r = hue2rgb(p, q, h + 1 / 3)
+    g = hue2rgb(p, q, h)
+    b = hue2rgb(p, q, h - 1 / 3)
+  }
+  const to2 = (x: number): string => Math.round(x * 255).toString(16).padStart(2, '0')
+  return `#${to2(r)}${to2(g)}${to2(b)}`
+}
+
+// token -> [lightness, saturation]; accent keeps the raw hex. Mirrors gen_themes.py.
+const DERIVE_LAYERS: [keyof ThemeTokens, number, number][] = [
+  ['bg', 0.085, 0.32],
+  ['bg-elev', 0.115, 0.3],
+  ['bg-elev-2', 0.15, 0.28],
+  ['border', 0.235, 0.26],
+  ['border-strong', 0.315, 0.24],
+  ['text', 0.93, 0.18],
+  ['text-dim', 0.66, 0.16]
+]
+
+export function deriveThemeTokens(hex: string): ThemeTokens {
+  const { h } = hexToHsl(hex)
+  const out = {} as ThemeTokens
+  for (const [key, l, s] of DERIVE_LAYERS) out[key] = hslToHex(h, s, l)
+  out.accent = hex.toLowerCase()
+  return out
+}
+
+// Apply a dynamically-derived theme from any accent hex as inline CSS vars (same
+// mechanism as a custom theme; never persisted — used by the viewer !color bridge).
+export function applyDynamicTheme(hex: string): void {
+  const tokens = deriveThemeTokens(hex)
+  const root = document.documentElement
+  root.setAttribute('data-theme', 'custom')
+  TOKEN_KEYS.forEach((k) => root.style.setProperty(`--${k}`, tokens[k]))
+  root.style.setProperty('--accent-soft', hexToRgba(tokens.accent, 0.18))
+}
