@@ -15,12 +15,22 @@ const MAX_ZOOM = 2.5
 
 export type CursorPos = { lineNumber: number; column: number }
 
+// Per-note memorization progress for Recall Mode (Space to enter). Rides along
+// in the node's data, so it persists in the board JSON with no migration.
+export type RecallStats = {
+  attempt: string // last typed-from-memory attempt (resume across restarts)
+  bestAccuracy: number // 0..1, best round so far
+  timesPracticed: number
+  streak: number // consecutive rounds at/above the streak accuracy threshold
+}
+
 export type CodeNodeData = {
   code: string
   language: string
   cursor?: CursorPos
   title?: string
   tags?: string[]
+  recall?: RecallStats
 }
 
 // Normalize a tag: trim, drop a leading '#', lowercase (matches db.ts).
