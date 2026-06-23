@@ -20,7 +20,8 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import TextNode from './components/TextNode'
-import CodeNode from './components/CodeNode'
+import CodeNode, { type CodeNodeType, type RecallStats } from './components/CodeNode'
+import RecallMode from './components/RecallMode'
 import FloatingEdge from './components/FloatingEdge'
 import Library, { type BoardSort } from './components/Library'
 import SearchPanel from './components/SearchPanel'
@@ -120,6 +121,8 @@ function Flow(): JSX.Element {
   const [boardList, setBoardList] = useState<BoardMeta[]>([])
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  // The code note currently open in Recall Mode (Space on a focused code note).
+  const [recallId, setRecallId] = useState<string | null>(null)
   // Collapse state of the left-side code-note cycler (global UI pref).
   const [mruCollapsed, setMruCollapsed] = useState<boolean>(
     () => localStorage.getItem(MRU_COLLAPSED_KEY) === '1'
@@ -493,6 +496,15 @@ function Flow(): JSX.Element {
           : (cursorRef.current + 1) % len
         setCursor(next)
         focusCodeNote(list[next])
+      } else if (e.key === ' ') {
+        // Space dives into Recall Mode for the focused code note.
+        if (typing || e.metaKey || e.ctrlKey || e.altKey) return
+        if (edgesRef.current.some((ed) => ed.selected)) return
+        const id = activeCodeId.current
+        if (!id) return
+        if (!nodesRef.current.some((n) => n.id === id && n.type === 'code')) return
+        e.preventDefault()
+        setRecallId(id)
       } else if (e.key === 'Enter') {
         if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
         const tag = active?.tagName
@@ -868,6 +880,28 @@ function Flow(): JSX.Element {
           onClose={() => setSearchOpen(false)}
         />
       )}
+
+      {recallId &&
+        (() => {
+          const n = nodes.find((x) => x.id === recallId && x.type === 'code') as
+            | CodeNodeType
+            | undefined
+          return n ? (
+            <RecallMode
+              node={n}
+              onClose={() => setRecallId(null)}
+              onSaveStats={(id: string, stats: RecallStats) =>
+                setNodes((nds) =>
+                  nds.map((node) =>
+                    node.id === id && node.type === 'code'
+                      ? { ...node, data: { ...node.data, recall: stats } }
+                      : node
+                  )
+                )
+              }
+            />
+          ) : null
+        })()}
 
       {themeEditor && (
         <ThemeEditor
