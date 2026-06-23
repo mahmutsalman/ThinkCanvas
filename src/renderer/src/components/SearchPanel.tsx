@@ -68,6 +68,8 @@ export default function SearchPanel({
   )
   const inputRef = useRef<HTMLInputElement>(null)
   const selRef = useRef<HTMLDivElement>(null)
+  // The result we last jumped to — so → can re-go-to it (and ← can come back).
+  const lastOpenedRef = useRef<SearchResult | null>(null)
 
   const setTagSortPersist = (s: 'used' | 'recent'): void => {
     setTagSort(s)
@@ -129,8 +131,19 @@ export default function SearchPanel({
   // Navigate to a result but KEEP focus in the search box, so arrow keys keep
   // cycling results instead of the canvas/note swallowing them.
   const openResult = (r: SearchResult): void => {
+    lastOpenedRef.current = r
     onOpenSnippet(r.boardId, r.nodeId)
     inputRef.current?.focus()
+  }
+
+  // ← returns to where search opened; → (re)jumps to the result you picked.
+  const goBack = (): void => {
+    onBack()
+    inputRef.current?.focus()
+  }
+  const goToResult = (): void => {
+    const target = lastOpenedRef.current ?? results[sel] ?? results[0]
+    if (target) openResult(target)
   }
 
   // Tag mode: pick a tag → search snippets carrying it.
@@ -170,6 +183,14 @@ export default function SearchPanel({
       const next = Math.max(sel - 1, 0)
       setSel(next)
       openResult(results[next])
+    } else if (e.key === 'ArrowLeft') {
+      // ← : back to where we were when search opened.
+      e.preventDefault()
+      goBack()
+    } else if (e.key === 'ArrowRight') {
+      // → : (re)jump to the result we picked.
+      e.preventDefault()
+      goToResult()
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (results[sel]) {
@@ -186,17 +207,14 @@ export default function SearchPanel({
     <div className="tc-search">
       <div className="tc-search__head">
         <span className="tc-search__title">Search snippets</span>
-        <span className="tc-search__hint">↑↓ Enter</span>
+        <span className="tc-search__hint">↑↓ pick · ← back · → go</span>
         <div className="tc-search__spacer" />
         <button
           className="tc-search__back"
           // Keep focus in the box so arrow keys keep working after going back.
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => {
-            onBack()
-            inputRef.current?.focus()
-          }}
-          title="Back to where you were when you opened search"
+          onClick={goBack}
+          title="Back to where you were when you opened search (←)"
         >
           ↩ Back
         </button>
