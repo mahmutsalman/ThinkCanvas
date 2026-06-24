@@ -543,6 +543,40 @@ function Flow(): JSX.Element {
           : (cursorRef.current + 1) % len
         setCursor(next)
         focusCodeNote(list[next])
+      } else if (e.key === ',') {
+        // `,` tours EVERY code note on the board in reading order (top→bottom,
+        // then left→right) — no prior click needed, unlike `.` which only walks
+        // notes you've clicked. It steps relative to the note you're currently
+        // on, so it also continues a `.` run or a click. Shift+, walks back;
+        // both wrap around.
+        if (typing || e.metaKey || e.ctrlKey || e.altKey) return
+        if (edgesRef.current.some((ed) => ed.selected)) return
+        const list = nodesRef.current
+          .filter((n) => n.type === 'code')
+          .sort((a, b) => {
+            // Band y into ~100px rows so notes roughly on a row read left→right.
+            const ra = Math.floor(a.position.y / 100)
+            const rb = Math.floor(b.position.y / 100)
+            return ra !== rb ? ra - rb : a.position.x - b.position.x
+          })
+        if (list.length === 0) return
+        e.preventDefault()
+        const len = list.length
+        const curIdx = list.findIndex((n) => n.id === activeCodeId.current)
+        const next =
+          curIdx === -1
+            ? e.shiftKey
+              ? len - 1
+              : 0
+            : e.shiftKey
+              ? (curIdx - 1 + len) % len
+              : (curIdx + 1) % len
+        const targetId = list[next].id
+        focusCodeNote(targetId)
+        // Keep the left cycler's highlight coherent when the tour lands on a
+        // note that also happens to live in the clicked-MRU list.
+        const inMru = mruRef.current.indexOf(targetId)
+        if (inMru !== -1) setCursor(inMru)
       } else if (e.key === ' ') {
         // Space dives into Recall Mode for the focused code note.
         if (typing || e.metaKey || e.ctrlKey || e.altKey) return

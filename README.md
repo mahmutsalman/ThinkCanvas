@@ -22,6 +22,7 @@ Built with **Electron + React + React Flow + Monaco**, dark theme, with a
 | Title a code note | The title field in the code note's header |
 | Search snippets | **⌘F** (or **Search**) → by tag or literal text, across every board |
 | Cycle code notes | Click code notes, then press **.** to cycle; **Enter** dives into the editor |
+| Tour all code notes | Press **,** to walk every code note in reading order (no click needed); **Shift+,** goes back |
 | Move / resize a code note | Drag the colored header bar; select + drag the corner handles |
 | Delete | Select a note/edge → **Backspace**/**Delete**, or the node's **Delete** button |
 | Pan / Zoom | Drag empty canvas or two-finger scroll; **⌘**+wheel or pinch to zoom |
