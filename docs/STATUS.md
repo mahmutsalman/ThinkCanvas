@@ -1,28 +1,40 @@
 # Status — ThinkCanvas
 
-**Last updated**: 2026-06-23 11:33
+**Last updated**: 2026-06-24
 **Current phase**: Phase 3 — Theming & collaboration
-**Current slice**: Slice 12 — Search-result arrow nav (← back / → go) + "at origin" indicator (done; in dev)
+**Current slice**: Slice 13 — Compile & Run code snippets (done; committed) + Recall code view + setup preamble
 
 ---
 
 ## Last Completed Task
-Search panel keyboard navigation: **→** jumps to the picked result, **←** returns to where search opened (replaces clicking Back). Added an "at origin" indicator after ← — a glowing banner ("Back at your starting point — press → to return"), the Back button lights up (filled accent), and the selected result drops its highlight. State clears on →, on clicking a result, or on a new query. (Prior slice 11: Recall Mode + dot-cycle zoom-drift fix.)
+Green **Run** button on code notes — compiles + runs Java/Python/JS/TS/C/C++/Go through a
+global FIFO queue (concurrency 1, 10s timeout, output cap) so 20–50 Run clicks can't spawn
+20–50 processes; output streams into an ephemeral panel. Bare fragments are auto-wrapped
+(class/main/package + imports) with error lines mapped back to the snippet. Recall Mode gained
+a **Ctrl+Tab code view** (editable real snippet + Run + boilerplate palette) and a hidden
+per-note **setup preamble** (`data.setup`) that runs but isn't graded. Audited all 185 study
+notes and auto-filled setup for fragment boards: **18 → 67 passing** (Python 3→44/50,
+HashMap 1→8/11). Windows installer via GitHub Actions. Commits `49a468b`, `7b33f4c`.
 
 ## Next Concrete Action
-Open — awaiting next feature request. Candidate polish: optionally make ←/→ caret-boundary-aware so the query is still editable mid-string; revisit whether the origin banner should be subtler.
+Open — none blocking. Candidates: (a) verify the **production** build (`build:mac`, swap the
+installed app, re-test JS/TS/Go/Java PATH resolution) and push to confirm the Windows Actions
+artifact; (b) review/refine the auto-derived `setup` values per note; (c) second migration
+pass for the ArrayList board (richer fixtures).
 
 ## Active Blockers
 - none
 
 ## Open Questions
-- Recall: should the peek view still show comments as context-hints (currently stripped everywhere)?
-- Comment-stripping is naive (doesn't parse strings) — revisit if a `//`/`#` inside a string gets over-trimmed.
-- Cross-board search arrow-land switches boards each time — keep instant or gate behind Enter?
+- Auto-derived setups are generic (`a = [0..9]`, `d = {...}`) — refine generator or hand-edit?
+- ArrayList board: 8 notes still fail (need streams / populated maps / adjacency-list fixtures).
+- Go fragments: unused-var/import strictness blocks some illustrations — `_ = x` escape hatch or accept?
+- TS: runtime-emitting constructs (enums/namespaces) fail under Node type-stripping — bundle `tsx` if needed.
+- (carried) Recall peek view: show comments as context-hints or stay comment-free?
 
 ## Recent Decisions (last 5)
-- Search panel treats arrows as navigation (like the existing ↑↓): ←/→ drive back/go unconditionally rather than moving the input caret. `atOrigin` state drives the indicator; cleared on →, click, or new query.
-- Recall Mode is a modal overlay (mirrors the `.tc-library` pattern); while open, the global canvas key handlers (`.`/Space/Enter, edge-label, ⌘F) bail via `recallActiveRef` so the modal owns the keyboard.
-- The two Recall editors need distinct Monaco `path` props — without them Monaco shares one text model and typing mutated the original (the "affects the original" bug).
-- Zoom-drift fix: pin the cycling zoom once (`navZoomRef`), reset only on user-initiated `onMoveEnd` — don't re-sample live zoom each `.` press.
-- `data.recall` rides along in node data (wholesale save/load, no migration); SQLite index untouched (only indexes code/language/title/tags).
+- Code execution lives in the **main process**, serialized through one FIFO queue (concurrency 1) — the RAM guarantee. Renderer never spawns; output is ephemeral (not persisted to board JSON).
+- **Auto-wrap** bare fragments (detected by class/main/package on a comment-stripped copy); run full programs literally. Go splits top-level decls (file scope) from statements (synthesized main).
+- **Setup preamble** (`data.setup`) over inline fixtures — keeps memorized `code` pure; Recall grades only `data.code`.
+- Toolchain PATH resolved from the user's **login shell** at runtime so a Finder-launched (packaged) build finds NVM node / JDK / Homebrew, matching `npm run dev`.
+- Board fixes are **surgical**: only add `setup` to fragment notes; leave reference solutions (Greedy Top-75) and external-dep fragments (Go-syntax board) untouched.
