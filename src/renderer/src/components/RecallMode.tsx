@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import type { CodeNodeType, RecallStats } from './CodeNode'
+import { RUNNABLE, clearRun, runCode, stopRun, useRunState } from '../lib/runStore'
+import { boilerplateFor } from '../lib/boilerplate'
 
 type MonacoEditor = Parameters<OnMount>[0]
 type Monaco = Parameters<OnMount>[1]
@@ -98,9 +100,11 @@ type Props = {
   node: CodeNodeType
   onClose: () => void
   onSaveStats: (id: string, stats: RecallStats) => void
+  // Persist edits made in the code view back to the board (data.code).
+  onSaveCode: (id: string, code: string) => void
 }
 
-export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.Element {
+export default function RecallMode({ node, onClose, onSaveStats, onSaveCode }: Props): JSX.Element {
   const language = node.data.language ?? 'plaintext'
   // The recall target is the code WITHOUT comments — you memorize code, not prose.
   const original = stripComments(node.data.code ?? '', language)
@@ -110,6 +114,29 @@ export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.E
   const [peeking, setPeeking] = useState(false)
   const [score, setScore] = useState<Score | null>(null)
   const [elapsed, setElapsed] = useState(0)
+
+  // Code view (Ctrl+Tab): the real, editable snippet — with comments — plus a Run
+  // button + output. Edits persist to the board. Toggle back for the recall round.
+  const [codeView, setCodeView] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+  const codeRef = useRef<string>(node.data.code ?? '')
+  const run = useRunState(node.id)
+  const canRun = RUNNABLE.has(language)
+  const isBusy = run.status === 'queued' || run.status === 'running'
+  const palette = boilerplateFor(language)
+
+  const runOrStop = useCallback(() => {
+    if (!canRun) return
+    if (run.status === 'queued' || run.status === 'running') stopRun(node.id)
+    else runCode(node.id, language, codeRef.current)
+  }, [canRun, run.status, node.id, language])
+
+  const onCopyChip = useCallback((label: string, text: string) => {
+    void navigator.clipboard.writeText(text)
+    setCopied(label)
+    setTimeout(() => setCopied((c) => (c === label ? null : c)), 1100)
+  }, [])
 
   const editorRef = useRef<MonacoEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
@@ -218,12 +245,19 @@ export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.E
   }, [prev, node.id, onSaveStats, onClose])
 
   // Global key handling (capture phase, so it beats Monaco's own bindings):
-  //   • Hold Tab → peek at the original; release → back to the attempt.
+  //   • Ctrl+Tab → toggle the code view (⌘+Tab is the macOS app switcher).
+  //   • Hold Tab → peek at the original (recall view only; in code view plain
+  //     Tab indents).
   //   • Esc → exit (saving the attempt).
-  //   • Cmd/Ctrl+Enter → grade the round.
+  //   • Cmd/Ctrl+Enter → run the code (code view) or grade the round (recall).
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Tab') {
+      if (e.key === 'Tab' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        e.stopPropagation()
+        setPeeking(false)
+        setCodeView((v) => !v)
+      } else if (e.key === 'Tab' && !codeView) {
         e.preventDefault()
         e.stopPropagation()
         setPeeking(true)
@@ -234,11 +268,12 @@ export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.E
       } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         e.stopPropagation()
-        finishRound()
+        if (codeView) runOrStop()
+        else finishRound()
       }
     }
     const onKeyUp = (e: KeyboardEvent): void => {
-      if (e.key === 'Tab') {
+      if (e.key === 'Tab' && !codeView) {
         e.preventDefault()
         e.stopPropagation()
         setPeeking(false)
@@ -250,59 +285,168 @@ export default function RecallMode({ node, onClose, onSaveStats }: Props): JSX.E
       window.removeEventListener('keydown', onKeyDown, true)
       window.removeEventListener('keyup', onKeyUp, true)
     }
-  }, [handleClose, finishRound])
+  }, [handleClose, finishRound, codeView, runOrStop])
 
   return (
     <div className="tc-recall" role="dialog" aria-modal="true">
       <div className={`tc-recall__card ${peeking ? 'is-peeking' : ''}`}>
         <div className="tc-recall__head">
-          <span className="tc-recall__badge">RECALL</span>
+          <span className={`tc-recall__badge ${codeView ? 'is-code' : ''}`}>
+            {codeView ? 'CODE' : 'RECALL'}
+          </span>
           <span className="tc-recall__title">{title}</span>
           <span className="tc-recall__spacer" />
-          {(prev?.streak ?? 0) > 0 && !score && (
+
+          {!codeView && (prev?.streak ?? 0) > 0 && !score && (
             <span className="tc-recall__streak" title="Current streak">
               🔥 ×{prev?.streak}
             </span>
           )}
-          <span className="tc-recall__timer">{fmtTime(elapsed)}</span>
-          <button className="tc-recall__btn" onClick={finishRound} title="Grade this round (⌘↵)">
-            Done ✓
+          {!codeView && <span className="tc-recall__timer">{fmtTime(elapsed)}</span>}
+
+          {codeView && canRun && (
+            <button
+              className={`tc-recall__btn run ${isBusy ? 'is-busy' : ''}`}
+              onClick={runOrStop}
+              title={isBusy ? 'Stop' : 'Run (⌘↵)'}
+            >
+              {run.status === 'running' ? '■ Stop' : run.status === 'queued' ? '… Queued' : '▶ Run'}
+            </button>
+          )}
+          {codeView && palette.length > 0 && (
+            <button
+              className={`tc-recall__btn ghost ${paletteOpen ? 'is-on' : ''}`}
+              onClick={() => setPaletteOpen((p) => !p)}
+              title="Boilerplate & imports"
+            >
+              {'{ }'}
+            </button>
+          )}
+
+          <button
+            className="tc-recall__btn ghost"
+            onClick={() => setCodeView((v) => !v)}
+            title="Toggle code view (Ctrl+Tab)"
+          >
+            {codeView ? 'Recall' : '</> Code'}
           </button>
+
+          {!codeView && (
+            <button className="tc-recall__btn" onClick={finishRound} title="Grade this round (⌘↵)">
+              Done ✓
+            </button>
+          )}
           <button className="tc-recall__btn ghost" onClick={handleClose} title="Exit (Esc)">
             ✕
           </button>
         </div>
 
-        <div className="tc-recall__editors">
-          {/* Type-from-memory editor (the only thing you interact with). */}
-          <div className="tc-recall__attempt">
-            <Editor
-              path={`recall-attempt-${node.id}`}
-              language={language}
-              defaultValue={prev?.attempt ?? ''}
-              theme="vs-dark"
-              onMount={handleMount}
-              onChange={handleChange}
-              options={EDITOR_OPTIONS}
-            />
+        {codeView ? (
+          /* CODE VIEW — the real, editable snippet (with comments) + Run + output. */
+          <div className="tc-recall__codeview">
+            {paletteOpen && palette.length > 0 && (
+              <div className="tc-recall__palette">
+                {palette.map((b) => (
+                  <button
+                    key={b.label}
+                    className="tc-recall__chip"
+                    onClick={() => onCopyChip(b.label, b.text)}
+                    title="Copy to clipboard — then paste (⌘V)"
+                  >
+                    {copied === b.label ? '✓ copied' : b.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="tc-recall__code">
+              <Editor
+                path={`recall-code-${node.id}`}
+                language={language}
+                defaultValue={node.data.code ?? ''}
+                theme="vs-dark"
+                onMount={(ed) => ed.focus()}
+                onChange={(v) => {
+                  const text = v ?? ''
+                  codeRef.current = text
+                  onSaveCode(node.id, text)
+                }}
+                options={EDITOR_OPTIONS}
+              />
+            </div>
+            {canRun && run.status !== 'idle' && (
+              <div className="tc-recall__output">
+                <div className="tc-recall__output-head">
+                  {run.status === 'queued' && <span>queued #{run.queuePosition}</span>}
+                  {run.status === 'running' && <span className="tc-recall__running">running…</span>}
+                  {run.status === 'done' && (
+                    <span className={run.exitCode === 0 ? 'ok' : 'bad'}>
+                      {run.canceled
+                        ? 'stopped'
+                        : run.timedOut
+                          ? 'timed out (10s)'
+                          : `exit ${run.exitCode} · ${run.durationMs}ms`}
+                    </span>
+                  )}
+                  <button
+                    className="tc-recall__output-x"
+                    onClick={() => clearRun(node.id)}
+                    title="Clear output"
+                  >
+                    ×
+                  </button>
+                </div>
+                <pre className="tc-recall__output-body">
+                  {run.output.map((seg, i) => (
+                    <span key={i} className={seg.isError ? 'err' : ''}>
+                      {seg.text}
+                    </span>
+                  ))}
+                </pre>
+              </div>
+            )}
           </div>
-          {/* Spotlit original — fades in only while Tab is held. */}
-          <div className="tc-recall__peek" aria-hidden={!peeking}>
-            <Editor
-              path={`recall-original-${node.id}`}
-              language={language}
-              value={original}
-              theme="vs-dark"
-              options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }}
-            />
+        ) : (
+          <div className="tc-recall__editors">
+            {/* Type-from-memory editor (the only thing you interact with). */}
+            <div className="tc-recall__attempt">
+              <Editor
+                path={`recall-attempt-${node.id}`}
+                language={language}
+                defaultValue={prev?.attempt ?? ''}
+                theme="vs-dark"
+                onMount={handleMount}
+                onChange={handleChange}
+                options={EDITOR_OPTIONS}
+              />
+            </div>
+            {/* Spotlit original — fades in only while Tab is held. */}
+            <div className="tc-recall__peek" aria-hidden={!peeking}>
+              <Editor
+                path={`recall-original-${node.id}`}
+                language={language}
+                value={original}
+                theme="vs-dark"
+                options={{ ...EDITOR_OPTIONS, readOnly: true, domReadOnly: true }}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="tc-recall__hint">
-          Hold <kbd>Tab</kbd> to peek · <kbd>⌘</kbd>+<kbd>↵</kbd> to grade · <kbd>Esc</kbd> to exit
+          {codeView ? (
+            <>
+              Edit & run the real snippet · <kbd>⌘</kbd>+<kbd>↵</kbd> to run ·{' '}
+              <kbd>Ctrl</kbd>+<kbd>Tab</kbd> back to recall · <kbd>Esc</kbd> to exit
+            </>
+          ) : (
+            <>
+              Hold <kbd>Tab</kbd> to peek · <kbd>⌘</kbd>+<kbd>↵</kbd> to grade ·{' '}
+              <kbd>Ctrl</kbd>+<kbd>Tab</kbd> for code · <kbd>Esc</kbd> to exit
+            </>
+          )}
         </div>
 
-        {score && (
+        {!codeView && score && (
           <div className="tc-recall__scorecard">
             <div className="tc-recall__scoretitle">ROUND COMPLETE</div>
             <div className="tc-recall__stars" aria-label={`${score.stars} of 5 stars`}>

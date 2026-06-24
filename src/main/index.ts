@@ -11,6 +11,7 @@ import {
   listTags,
   type SyncBoard
 } from './db'
+import { runQueue, type RunRequest } from './runQueue'
 
 // Pin the app name AND the userData folder so dev and the packaged build share
 // ONE board store. Dev would otherwise use package.json "name" = "thinkcanvas"
@@ -89,6 +90,17 @@ function registerBoardIpc(): void {
   })
 }
 
+// Compile & run code snippets. The renderer requests a run; the global queue
+// (concurrency 1) executes one at a time and emits progress on 'run:event'.
+function registerRunIpc(): void {
+  ipcMain.handle('run:start', (_e, req: RunRequest) => {
+    runQueue.enqueue(req)
+  })
+  ipcMain.handle('run:cancel', (_e, nodeId: string) => {
+    runQueue.cancel(nodeId)
+  })
+}
+
 // Read-only search channels over the derived SQLite index.
 function registerSnippetIpc(): void {
   ipcMain.handle('snippets:search', (_e, query: string, mode: 'tag' | 'text') =>
@@ -163,6 +175,13 @@ function createWindow(): void {
   }
 
   setupStreamColorBridge(mainWindow)
+
+  // Stream run-queue progress (queued/start/output/end) to this window.
+  const onRunEvent = (evt: unknown): void => {
+    if (!mainWindow.isDestroyed()) mainWindow.webContents.send('run:event', evt)
+  }
+  runQueue.on('event', onRunEvent)
+  mainWindow.on('closed', () => runQueue.off('event', onRunEvent))
 }
 
 // Single-instance lock: if another ThinkCanvas is already running, quit this
@@ -184,6 +203,7 @@ if (!gotSingleInstanceLock) {
     openDatabase() // before IPC — the snippet handlers depend on it
     registerBoardIpc()
     registerSnippetIpc()
+    registerRunIpc()
     createWindow()
 
     app.on('activate', () => {

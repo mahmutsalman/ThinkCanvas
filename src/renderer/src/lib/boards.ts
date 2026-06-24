@@ -37,6 +37,20 @@ export type SearchMode = 'tag' | 'text'
 // A tag plus its usage stats, for the ranked tag filter (mirrors main/db.ts).
 export type TagInfo = { name: string; count: number; lastUsed: number }
 
+// Run-queue progress events streamed from main (mirrors main/runQueue.ts).
+export type RunEvent =
+  | { type: 'queued'; nodeId: string; position: number }
+  | { type: 'start'; nodeId: string }
+  | { type: 'output'; nodeId: string; chunk: string; isError: boolean }
+  | {
+      type: 'end'
+      nodeId: string
+      exitCode: number | null
+      durationMs: number
+      timedOut: boolean
+      canceled: boolean
+    }
+
 declare global {
   interface Window {
     boards: {
@@ -48,6 +62,11 @@ declare global {
     snippets: {
       search: (query: string, mode: SearchMode) => Promise<SearchResult[]>
       listTags: () => Promise<TagInfo[]>
+    }
+    runner: {
+      start: (req: { nodeId: string; language: string; code: string }) => Promise<void>
+      cancel: (nodeId: string) => Promise<void>
+      onEvent: (cb: (evt: RunEvent) => void) => () => void
     }
   }
 }

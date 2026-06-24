@@ -988,6 +988,15 @@ function Flow(): JSX.Element {
                   )
                 )
               }
+              onSaveCode={(id: string, code: string) =>
+                setNodes((nds) =>
+                  nds.map((node) =>
+                    node.id === id && node.type === 'code'
+                      ? { ...node, data: { ...node.data, code } }
+                      : node
+                  )
+                )
+              }
             />
           ) : null
         })()}

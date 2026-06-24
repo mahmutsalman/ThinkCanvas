@@ -9,6 +9,7 @@ import {
   type Node
 } from '@xyflow/react'
 import { registerEditor, unregisterEditor } from '../lib/codeEditors'
+import { RUNNABLE, clearRun, runCode, stopRun, useRunState } from '../lib/runStore'
 
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 2.5
@@ -47,6 +48,16 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
   const [tagDraft, setTagDraft] = useState('')
 
   const tags = data.tags ?? []
+
+  // Compile & run state for this note (ephemeral — never saved to the board).
+  const run = useRunState(id)
+  const canRun = RUNNABLE.has(data.language)
+  const isBusy = run.status === 'queued' || run.status === 'running'
+
+  const onRunClick = (): void => {
+    if (isBusy) stopRun(id)
+    else runCode(id, data.language, data.code)
+  }
 
   const addTag = (raw: string): void => {
     const name = normTag(raw)
@@ -164,6 +175,15 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
           onChange={(e) => updateNodeData(id, { title: e.target.value })}
           title="Title (searchable, shown in results)"
         />
+        {canRun && (
+          <button
+            className={`nodrag tc-code__run ${isBusy ? 'is-busy' : ''}`}
+            onClick={onRunClick}
+            title={isBusy ? 'Stop' : 'Run'}
+          >
+            {run.status === 'running' ? '■' : run.status === 'queued' ? '…' : '▶'}
+          </button>
+        )}
         <button className="nodrag tc-code__btn" onClick={toText} title="Convert to text note">
           T
         </button>
@@ -225,6 +245,40 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
           onBlur={() => addTag(tagDraft)}
         />
       </div>
+
+      {/* Ephemeral run output. Streams stdout (default) / stderr (red); meta
+          lines like "Compiling…" arrive on stdout. Not persisted to the board. */}
+      {canRun && run.status !== 'idle' && (
+        <div className="nodrag nowheel tc-code__output">
+          <div className="tc-code__output-head">
+            {run.status === 'queued' && <span>queued #{run.queuePosition}</span>}
+            {run.status === 'running' && <span className="tc-code__running">running…</span>}
+            {run.status === 'done' && (
+              <span className={run.exitCode === 0 ? 'ok' : 'bad'}>
+                {run.canceled
+                  ? 'stopped'
+                  : run.timedOut
+                    ? 'timed out (10s)'
+                    : `exit ${run.exitCode} · ${run.durationMs}ms`}
+              </span>
+            )}
+            <button
+              className="tc-code__output-x"
+              onClick={() => clearRun(id)}
+              title="Clear output"
+            >
+              ×
+            </button>
+          </div>
+          <pre className="tc-code__output-body">
+            {run.output.map((seg, i) => (
+              <span key={i} className={seg.isError ? 'err' : ''}>
+                {seg.text}
+              </span>
+            ))}
+          </pre>
+        </div>
+      )}
 
       <Handle type="source" position={Position.Top} className="tc-handle" />
       <Handle type="target" position={Position.Top} className="tc-handle" />

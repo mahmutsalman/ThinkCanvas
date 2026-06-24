@@ -1948,3 +1948,216 @@ body,
   gap: 12px;
   margin-top: 4px;
 }
+
+/* --- Compile & Run -------------------------------------------------------- */
+/* Green Run button in the code-note header. Turns into a Stop (■) while busy. */
+.tc-code__run {
+  background: transparent;
+  border: 1px solid #2ea043;
+  color: #3fb950;
+  border-radius: 5px;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.tc-code__run:hover {
+  background: rgba(46, 160, 67, 0.15);
+  border-color: #3fb950;
+}
+
+.tc-code__run.is-busy {
+  color: #ff7a7a;
+  border-color: #ff7a7a;
+}
+
+.tc-code__run.is-busy:hover {
+  background: rgba(255, 122, 122, 0.15);
+}
+
+/* Ephemeral output panel below the tags. */
+.tc-code__output {
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  max-height: 220px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tc-code__output-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+
+.tc-code__output-head .ok {
+  color: #3fb950;
+}
+
+.tc-code__output-head .bad {
+  color: #ff7a7a;
+}
+
+.tc-code__running {
+  color: var(--accent);
+}
+
+.tc-code__output-x {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.tc-code__output-x:hover {
+  color: var(--text);
+}
+
+.tc-code__output-body {
+  margin: 0;
+  padding: 6px 8px;
+  overflow: auto;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tc-code__output-body .err {
+  color: #ff7a7a;
+}
+
+/* --- Recall Mode: Code view (Ctrl+Tab) ----------------------------------- */
+.tc-recall__badge.is-code {
+  color: var(--bg);
+  background: #3fb950;
+}
+
+/* Green Run button in the code-view header. */
+.tc-recall__btn.run {
+  background: #2ea043;
+}
+.tc-recall__btn.run.is-busy {
+  background: #d9534f;
+}
+.tc-recall__btn.ghost.is-on {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.tc-recall__codeview {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Click-to-copy boilerplate chips. */
+.tc-recall__palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.tc-recall__chip {
+  font-size: 11px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  color: var(--text);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+.tc-recall__chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tc-recall__code {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* Ephemeral run output panel inside the code view. */
+.tc-recall__output {
+  flex: 0 0 auto;
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.tc-recall__output-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+.tc-recall__output-head .ok {
+  color: #3fb950;
+}
+.tc-recall__output-head .bad {
+  color: #ff7a7a;
+}
+.tc-recall__running {
+  color: var(--accent);
+}
+
+.tc-recall__output-x {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+.tc-recall__output-x:hover {
+  color: var(--text);
+}
+
+.tc-recall__output-body {
+  margin: 0;
+  padding: 8px 12px;
+  overflow: auto;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.tc-recall__output-body .err {
+  color: #ff7a7a;
+}

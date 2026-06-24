@@ -9,6 +9,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "build:mac": "electron-vite build && electron-builder --mac --arm64",
+    "build:win": "electron-vite build && electron-builder --win --x64",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
@@ -38,6 +40,21 @@
           ]
         }
       ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     }
   },
   "dependencies": {

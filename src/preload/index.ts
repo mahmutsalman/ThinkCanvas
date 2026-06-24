@@ -20,6 +20,20 @@ contextBridge.exposeInMainWorld('snippets', {
   listTags: () => ipcRenderer.invoke('tags:list')
 })
 
+// Compile & run code snippets. start/cancel are fire-and-forget; progress streams
+// back on 'run:event' (subscribe via onEvent). The main-process queue enforces
+// one-at-a-time execution.
+contextBridge.exposeInMainWorld('runner', {
+  start: (req: { nodeId: string; language: string; code: string }) =>
+    ipcRenderer.invoke('run:start', req),
+  cancel: (nodeId: string) => ipcRenderer.invoke('run:cancel', nodeId),
+  onEvent: (cb: (evt: unknown) => void) => {
+    const listener = (_e: unknown, evt: unknown): void => cb(evt)
+    ipcRenderer.on('run:event', listener)
+    return () => ipcRenderer.removeListener('run:event', listener)
+  }
+})
+
 // Viewer !color theme bridge. The main process watches stream-color.json (written
 // by the Twitch daemon) and emits 'stream-color:change'. Renderer subscribes here.
 contextBridge.exposeInMainWorld('streamColor', {
