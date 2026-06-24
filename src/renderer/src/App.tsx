@@ -997,6 +997,15 @@ function Flow(): JSX.Element {
                   )
                 )
               }
+              onSaveSetup={(id: string, setup: string) =>
+                setNodes((nds) =>
+                  nds.map((node) =>
+                    node.id === id && node.type === 'code'
+                      ? { ...node, data: { ...node.data, setup } }
+                      : node
+                  )
+                )
+              }
             />
           ) : null
         })()}

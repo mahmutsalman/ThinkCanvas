@@ -24,7 +24,7 @@ contextBridge.exposeInMainWorld('snippets', {
 // back on 'run:event' (subscribe via onEvent). The main-process queue enforces
 // one-at-a-time execution.
 contextBridge.exposeInMainWorld('runner', {
-  start: (req: { nodeId: string; language: string; code: string }) =>
+  start: (req: { nodeId: string; language: string; code: string; setup?: string }) =>
     ipcRenderer.invoke('run:start', req),
   cancel: (nodeId: string) => ipcRenderer.invoke('run:cancel', nodeId),
   onEvent: (cb: (evt: unknown) => void) => {

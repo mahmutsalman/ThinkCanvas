@@ -17,6 +17,16 @@ function countLines(s: string): number {
   return s.split('\n').length
 }
 
+// Keyword detection must ignore comments — a note with `// var at package scope`
+// or `// the Main class` should NOT be treated as a full program. Strip comments
+// for DETECTION only; the real source we compile keeps them.
+function stripCommentsForDetect(code: string): string {
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/.*$/gm, ' ')
+    .replace(/#.*$/gm, ' ')
+}
+
 const JAVA_PREFIX = `import java.util.*;
 import java.util.stream.*;
 import java.util.function.*;
@@ -83,26 +93,62 @@ const GO_IMPORTS: Array<{ path: string; token: string }> = [
   { path: 'container/list', token: 'list' }
 ]
 
+// Partition top-level lines: declarations (func/type/const/var/import) must live
+// at file scope; everything else is a statement that must live inside func main().
+// Depth tracking keeps multi-line constructs (a func body, a `var (…)` block) in
+// one bucket. Approximate (ignores braces inside strings) — fine for snippets.
+function splitGoTopLevel(code: string): { decls: string; stmts: string } {
+  const decls: string[] = []
+  const stmts: string[] = []
+  let depth = 0
+  let bucket = stmts
+  for (const line of code.split('\n')) {
+    const codePart = line.replace(/\/\/.*$/, '')
+    if (depth === 0) {
+      bucket = /^\s*(func|type|const|var|import)\b/.test(codePart) ? decls : stmts
+    }
+    bucket.push(line)
+    for (const ch of codePart) {
+      if (ch === '{' || ch === '(' || ch === '[') depth++
+      else if (ch === '}' || ch === ')' || ch === ']') depth = Math.max(0, depth - 1)
+    }
+  }
+  return { decls: decls.join('\n'), stmts: stmts.join('\n') }
+}
+
 function wrapGo(code: string): WrapResult | null {
-  if (/\bpackage\s+\w+/.test(code)) return null
-  const used = GO_IMPORTS.filter((p) => new RegExp(`\\b${p.token}\\.`).test(code))
+  const bare = stripCommentsForDetect(code)
+  if (/\bpackage\s+\w+/.test(bare)) return null
+  const used = GO_IMPORTS.filter((p) => new RegExp(`\\b${p.token}\\.`).test(bare))
   const importBlock = used.length
     ? 'import (\n' + used.map((p) => `\t"${p.path}"`).join('\n') + '\n)\n\n'
     : ''
-  const prefix = `package main\n\n${importBlock}func main() {\n`
-  return {
-    source: prefix + code + '\n}\n',
-    filename: 'snippet.go',
-    runName: '',
-    lineOffset: countLines(prefix) - 1
+
+  // The snippet already defines main → drop it in at file scope verbatim.
+  if (/\bfunc\s+main\s*\(/.test(bare)) {
+    const prefix = `package main\n\n${importBlock}`
+    return { source: prefix + code + '\n', filename: 'snippet.go', runName: '', lineOffset: countLines(prefix) - 1 }
   }
+
+  // No top-level declarations → pure statements, wrap the whole thing in main().
+  if (!/(^|\n)\s*(func|type|const|var|import)\b/.test(bare)) {
+    const prefix = `package main\n\n${importBlock}func main() {\n`
+    return { source: prefix + code + '\n}\n', filename: 'snippet.go', runName: '', lineOffset: countLines(prefix) - 1 }
+  }
+
+  // Mixed: declarations to file scope, statements into a synthesized main().
+  const { decls, stmts } = splitGoTopLevel(code)
+  const declPart = decls.trim() ? decls + '\n\n' : ''
+  const prefix = `package main\n\n${importBlock}${declPart}func main() {\n`
+  return { source: prefix + stmts + '\n}\n', filename: 'snippet.go', runName: '', lineOffset: countLines(prefix) - 1 }
 }
 
 // Wrap when the fragment lacks the structural keyword that makes it a program.
 export function wrapForRun(language: string, code: string): WrapResult | null {
   if (language === 'go') return wrapGo(code)
+  const bare = stripCommentsForDetect(code)
   if (language === 'java') {
-    if (/\b(class|interface|enum|record)\s+\w+/.test(code)) return null
+    if (/\b(class|interface|enum|record)\s+\w+/.test(bare)) return null
     const prefix = JAVA_PREFIX
     return {
       source: prefix + code + JAVA_SUFFIX,
@@ -112,7 +158,7 @@ export function wrapForRun(language: string, code: string): WrapResult | null {
     }
   }
   if (language === 'cpp') {
-    if (/\bmain\s*\(/.test(code)) return null
+    if (/\bmain\s*\(/.test(bare)) return null
     return {
       source: CPP_PREFIX + code + CPP_SUFFIX,
       filename: 'snippet.cpp',
@@ -121,7 +167,7 @@ export function wrapForRun(language: string, code: string): WrapResult | null {
     }
   }
   if (language === 'c') {
-    if (/\bmain\s*\(/.test(code)) return null
+    if (/\bmain\s*\(/.test(bare)) return null
     return {
       source: C_PREFIX + code + C_SUFFIX,
       filename: 'snippet.c',

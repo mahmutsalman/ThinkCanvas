@@ -102,9 +102,17 @@ type Props = {
   onSaveStats: (id: string, stats: RecallStats) => void
   // Persist edits made in the code view back to the board (data.code).
   onSaveCode: (id: string, code: string) => void
+  // Persist the hidden run-time setup preamble (data.setup).
+  onSaveSetup: (id: string, setup: string) => void
 }
 
-export default function RecallMode({ node, onClose, onSaveStats, onSaveCode }: Props): JSX.Element {
+export default function RecallMode({
+  node,
+  onClose,
+  onSaveStats,
+  onSaveCode,
+  onSaveSetup
+}: Props): JSX.Element {
   const language = node.data.language ?? 'plaintext'
   // The recall target is the code WITHOUT comments — you memorize code, not prose.
   const original = stripComments(node.data.code ?? '', language)
@@ -119,8 +127,10 @@ export default function RecallMode({ node, onClose, onSaveStats, onSaveCode }: P
   // button + output. Edits persist to the board. Toggle back for the recall round.
   const [codeView, setCodeView] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [setupOpen, setSetupOpen] = useState(!!node.data.setup)
   const [copied, setCopied] = useState<string | null>(null)
   const codeRef = useRef<string>(node.data.code ?? '')
+  const setupRef = useRef<string>(node.data.setup ?? '')
   const run = useRunState(node.id)
   const canRun = RUNNABLE.has(language)
   const isBusy = run.status === 'queued' || run.status === 'running'
@@ -129,7 +139,7 @@ export default function RecallMode({ node, onClose, onSaveStats, onSaveCode }: P
   const runOrStop = useCallback(() => {
     if (!canRun) return
     if (run.status === 'queued' || run.status === 'running') stopRun(node.id)
-    else runCode(node.id, language, codeRef.current)
+    else runCode(node.id, language, codeRef.current, setupRef.current || undefined)
   }, [canRun, run.status, node.id, language])
 
   const onCopyChip = useCallback((label: string, text: string) => {
@@ -322,6 +332,15 @@ export default function RecallMode({ node, onClose, onSaveStats, onSaveCode }: P
               {'{ }'}
             </button>
           )}
+          {codeView && (
+            <button
+              className={`tc-recall__btn ghost ${setupOpen ? 'is-on' : ''}`}
+              onClick={() => setSetupOpen((s) => !s)}
+              title="Hidden setup preamble — runs before your code, not graded in Recall"
+            >
+              setup
+            </button>
+          )}
 
           <button
             className="tc-recall__btn ghost"
@@ -344,6 +363,24 @@ export default function RecallMode({ node, onClose, onSaveStats, onSaveCode }: P
         {codeView ? (
           /* CODE VIEW — the real, editable snippet (with comments) + Run + output. */
           <div className="tc-recall__codeview">
+            {setupOpen && (
+              <div className="tc-recall__setup">
+                <div className="tc-recall__setup-label">
+                  setup — runs before your code, hidden from Recall
+                </div>
+                <textarea
+                  className="tc-recall__setup-input nodrag nowheel"
+                  defaultValue={node.data.setup ?? ''}
+                  spellCheck={false}
+                  rows={2}
+                  placeholder="e.g. a = [0, 1, 2, 3, 4, 5]"
+                  onChange={(e) => {
+                    setupRef.current = e.target.value
+                    onSaveSetup(node.id, e.target.value)
+                  }}
+                />
+              </div>
+            )}
             {paletteOpen && palette.length > 0 && (
               <div className="tc-recall__palette">
                 {palette.map((b) => (

@@ -12,6 +12,9 @@ export interface RunRequest {
   nodeId: string
   language: string
   code: string
+  // Optional hidden preamble prepended before the snippet at run time (defines
+  // fixtures / imports). Not part of the memorized code; not graded in Recall.
+  setup?: string
 }
 
 // Events streamed to the renderer (forwarded over the 'run:event' channel).
@@ -137,7 +140,10 @@ class RunQueue extends EventEmitter {
     try {
       const runner = getRunner(job.language)
       if (!runner) throw new Error(`No runner for "${job.language}"`)
-      const result = await runner.run(job.code, ctx)
+      // Prepend the setup preamble (if any) so fixtures/imports exist before the
+      // snippet runs. Auto-wrap then scaffolds the combined source as one unit.
+      const effectiveCode = job.setup ? `${job.setup}\n${job.code}` : job.code
+      const result = await runner.run(effectiveCode, ctx)
       exitCode = result.exitCode
       durationMs = result.durationMs
     } catch (err) {

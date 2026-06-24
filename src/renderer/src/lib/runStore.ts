@@ -77,11 +77,11 @@ function ensureWired(): void {
   })
 }
 
-export function runCode(nodeId: string, language: string, code: string): void {
+export function runCode(nodeId: string, language: string, code: string, setup?: string): void {
   ensureWired()
   // Optimistic: show queued immediately and wipe stale output.
   set(nodeId, { status: 'queued', output: [], queuePosition: undefined })
-  void window.runner.start({ nodeId, language, code })
+  void window.runner.start({ nodeId, language, code, setup })
 }
 
 export function stopRun(nodeId: string): void {

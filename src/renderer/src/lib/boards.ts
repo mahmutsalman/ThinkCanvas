@@ -64,7 +64,12 @@ declare global {
       listTags: () => Promise<TagInfo[]>
     }
     runner: {
-      start: (req: { nodeId: string; language: string; code: string }) => Promise<void>
+      start: (req: {
+        nodeId: string
+        language: string
+        code: string
+        setup?: string
+      }) => Promise<void>
       cancel: (nodeId: string) => Promise<void>
       onEvent: (cb: (evt: RunEvent) => void) => () => void
     }

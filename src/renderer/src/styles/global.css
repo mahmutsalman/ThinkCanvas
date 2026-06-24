@@ -2161,3 +2161,34 @@ body,
 .tc-recall__output-body .err {
   color: #ff7a7a;
 }
+
+/* Hidden setup preamble field in the Recall code view. */
+.tc-recall__setup {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  padding: 6px 12px 8px;
+}
+.tc-recall__setup-label {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.tc-recall__setup-input {
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.tc-recall__setup-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}

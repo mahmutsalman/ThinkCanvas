@@ -32,6 +32,9 @@ export type CodeNodeData = {
   title?: string
   tags?: string[]
   recall?: RecallStats
+  // Hidden run-time preamble (fixtures/imports). Prepended before `code` when
+  // running; never shown in the editor or graded in Recall Mode.
+  setup?: string
 }
 
 // Normalize a tag: trim, drop a leading '#', lowercase (matches db.ts).
@@ -56,7 +59,7 @@ export default function CodeNode({ id, data, selected }: NodeProps<CodeNodeType>
 
   const onRunClick = (): void => {
     if (isBusy) stopRun(id)
-    else runCode(id, data.language, data.code)
+    else runCode(id, data.language, data.code, data.setup)
   }
 
   const addTag = (raw: string): void => {
