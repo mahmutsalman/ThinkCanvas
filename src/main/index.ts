@@ -45,6 +45,9 @@ function registerBoardIpc(): void {
           name: b.name ?? 'Untitled',
           createdAt: b.createdAt ?? 0,
           updatedAt: b.updatedAt ?? 0,
+          // Boards saved before this field existed fall back to updatedAt so
+          // they still have a sensible "recently viewed" position.
+          lastOpenedAt: b.lastOpenedAt ?? b.updatedAt ?? 0,
           noteCount: Array.isArray(b.nodes) ? b.nodes.length : 0
         })
       } catch {
@@ -59,6 +62,22 @@ function registerBoardIpc(): void {
       return JSON.parse(await fs.readFile(join(boardsDir(), `${id}.json`), 'utf8'))
     } catch {
       return null
+    }
+  })
+
+  // Stamp lastOpenedAt = now directly on the board file, without a full board
+  // rewrite from the renderer (which would also bump updatedAt). Lets us record
+  // "viewed at" even when the user just opens a board and never edits it.
+  ipcMain.handle('boards:touch', async (_e, id: string) => {
+    try {
+      const path = join(boardsDir(), `${id}.json`)
+      const b = JSON.parse(await fs.readFile(path, 'utf8'))
+      const now = Date.now()
+      b.lastOpenedAt = now
+      await fs.writeFile(path, JSON.stringify(b), 'utf8')
+      return now
+    } catch {
+      return 0
     }
   })
 

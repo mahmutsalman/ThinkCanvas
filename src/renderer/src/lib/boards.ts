@@ -5,6 +5,10 @@ export type Board = {
   name: string
   createdAt: number
   updatedAt: number
+  // When the board was last OPENED for viewing — distinct from updatedAt, which
+  // only moves on edits. This is what "Recently viewed" / "studied recently"
+  // sorts by, so a board you opened but didn't edit still counts as recent.
+  lastOpenedAt?: number
   nodes: Node[]
   edges: Edge[]
   // Persisted most-recently-used code-note ids (the left-side cycler list), so
@@ -17,6 +21,7 @@ export type BoardMeta = {
   name: string
   createdAt: number
   updatedAt: number
+  lastOpenedAt: number
   noteCount: number
 }
 
@@ -58,6 +63,9 @@ declare global {
       load: (id: string) => Promise<Board | null>
       save: (board: Board) => Promise<boolean>
       remove: (id: string) => Promise<boolean>
+      // Stamp lastOpenedAt = now on a board file in place (no full rewrite),
+      // returning the new timestamp. Called when a board is opened for viewing.
+      touch: (id: string) => Promise<number>
     }
     snippets: {
       search: (query: string, mode: SearchMode) => Promise<SearchResult[]>
@@ -83,7 +91,15 @@ export const newBoardId = (): string =>
 
 export function emptyBoard(name = 'Untitled'): Board {
   const now = Date.now()
-  return { id: newBoardId(), name, createdAt: now, updatedAt: now, nodes: [], edges: [] }
+  return {
+    id: newBoardId(),
+    name,
+    createdAt: now,
+    updatedAt: now,
+    lastOpenedAt: now,
+    nodes: [],
+    edges: []
+  }
 }
 
 // Strip transient interaction state that must never persist between sessions:

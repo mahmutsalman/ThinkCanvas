@@ -141,13 +141,16 @@ function Flow(): JSX.Element {
       return next
     })
   }, [])
-  // Library sort order (global UI pref): 'updated' (recent first) or 'created'.
-  const [boardSort, setBoardSort] = useState<BoardSort>(
-    () => (localStorage.getItem(BOARD_SORT_KEY) === 'created' ? 'created' : 'updated')
-  )
+  // Library sort order (global UI pref). Cycles: 'viewed' (recently opened) →
+  // 'updated' (recently edited) → 'created' (the order you made them).
+  const [boardSort, setBoardSort] = useState<BoardSort>(() => {
+    const v = localStorage.getItem(BOARD_SORT_KEY)
+    return v === 'created' || v === 'updated' || v === 'viewed' ? v : 'viewed'
+  })
   const toggleBoardSort = useCallback(() => {
     setBoardSort((m) => {
-      const next: BoardSort = m === 'created' ? 'updated' : 'created'
+      const order: BoardSort[] = ['viewed', 'updated', 'created']
+      const next = order[(order.indexOf(m) + 1) % order.length]
       localStorage.setItem(BOARD_SORT_KEY, next)
       return next
     })
@@ -256,6 +259,10 @@ function Flow(): JSX.Element {
   const pendingViewport = useRef<Viewport | null>(null)
   const hydrated = useRef(false)
   const createdAtRef = useRef<number>(Date.now())
+  // Preserve the open board's lastOpenedAt across autosaves (which build the
+  // saved object from scratch and would otherwise drop it). Stamped to `now`
+  // whenever we open a board for viewing; saves carry it through unchanged.
+  const lastOpenedAtRef = useRef<number>(Date.now())
   const boardNameRef = useRef(boardName)
   boardNameRef.current = boardName
   const boardIdRef = useRef(boardId)
@@ -268,6 +275,7 @@ function Flow(): JSX.Element {
     (board: Board) => {
       const clean = sanitizeBoard(board)
       createdAtRef.current = clean.createdAt
+      lastOpenedAtRef.current = clean.lastOpenedAt ?? clean.updatedAt ?? clean.createdAt
       setBoardId(clean.id)
       setBoardName(clean.name)
       setNodes(clean.nodes)
@@ -293,6 +301,7 @@ function Flow(): JSX.Element {
       name: boardNameRef.current,
       createdAt: createdAtRef.current,
       updatedAt: Date.now(),
+      lastOpenedAt: lastOpenedAtRef.current,
       nodes: clean.nodes,
       edges: clean.edges,
       mru: mruRef.current
@@ -317,6 +326,11 @@ function Flow(): JSX.Element {
         board = loadLegacyBoard() ?? emptyBoard()
         await window.boards.save(board)
       }
+      // Opening on startup counts as a view too.
+      if (board.id) {
+        const ts = await window.boards.touch(board.id)
+        if (ts) board.lastOpenedAt = ts
+      }
       openBoard(board)
       setBoardList(sortBoards(await window.boards.list()))
     })()
@@ -332,6 +346,7 @@ function Flow(): JSX.Element {
         name: boardName,
         createdAt: createdAtRef.current,
         updatedAt: Date.now(),
+        lastOpenedAt: lastOpenedAtRef.current,
         nodes: clean.nodes,
         edges: clean.edges,
         mru
@@ -353,6 +368,9 @@ function Flow(): JSX.Element {
         return
       }
       await saveCurrentNow()
+      // Stamp "viewed now" before loading, so the board we open carries the
+      // fresh lastOpenedAt (openBoard reads it into lastOpenedAtRef).
+      await window.boards.touch(id)
       const board = await window.boards.load(id)
       if (board) openBoard(board)
       setLibraryOpen(false)

@@ -9,7 +9,8 @@ contextBridge.exposeInMainWorld('boards', {
   list: () => ipcRenderer.invoke('boards:list'),
   load: (id: string) => ipcRenderer.invoke('boards:load', id),
   save: (board: unknown) => ipcRenderer.invoke('boards:save', board),
-  remove: (id: string) => ipcRenderer.invoke('boards:delete', id)
+  remove: (id: string) => ipcRenderer.invoke('boards:delete', id),
+  touch: (id: string) => ipcRenderer.invoke('boards:touch', id)
 })
 
 // Cross-board snippet search over the derived SQLite/FTS5 index (read-only;
